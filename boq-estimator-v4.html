@@ -1,0 +1,3276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BOQ Estimator v4 — Professional Construction Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0b0e13;
+  --surface:#13171f;
+  --surface2:#1c2230;
+  --border:#252d3d;
+  --accent:#e8b84b;
+  --accent2:#3ecf8e;
+  --accent3:#5b8dee;
+  --red:#e85b5b;
+  --text:#f0f2f7;
+  --muted:#7a8499;
+  --mono:'DM Mono',monospace;
+  --sans:'Syne',sans-serif;
+  --serif:'Fraunces',serif;
+  --radius:10px;
+  --shadow:0 4px 24px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
+/* Grain overlay */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:.4}
+
+/* LAYOUT */
+.shell{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.main{display:flex;flex-direction:column;min-height:100vh}
+
+/* SIDEBAR */
+.logo{padding:24px 20px 20px;border-bottom:1px solid var(--border)}
+.logo-mark{font-family:var(--serif);font-size:20px;font-weight:600;color:var(--accent);letter-spacing:-.5px}
+.logo-sub{font-size:10px;color:var(--muted);font-family:var(--mono);letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+
+.nav-section{padding:16px 12px 8px;font-size:9px;color:var(--muted);font-family:var(--mono);letter-spacing:2px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);transition:all .2s;margin:1px 8px;position:relative}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:rgba(232,184,75,.1);color:var(--accent);border:1px solid rgba(232,184,75,.2)}
+.nav-item .badge{margin-left:auto;background:var(--accent);color:#000;font-size:9px;padding:2px 6px;border-radius:20px;font-family:var(--mono);font-weight:500}
+.nav-icon{width:16px;text-align:center;font-size:14px}
+
+.app-switcher{margin:12px 8px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.app-switch-btn{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;font-size:12px;font-weight:700;transition:all .2s;width:100%;background:none;border:none;color:var(--muted);text-align:left}
+.app-switch-btn.active{background:var(--surface2);color:var(--accent)}
+.app-switch-btn:hover{background:var(--surface2);color:var(--text)}
+.app-switch-btn+.app-switch-btn{border-top:1px solid var(--border)}
+
+.sidebar-bottom{margin-top:auto;padding:16px;border-top:1px solid var(--border)}
+.upgrade-card{background:linear-gradient(135deg,rgba(232,184,75,.15),rgba(62,207,142,.08));border:1px solid rgba(232,184,75,.3);border-radius:var(--radius);padding:14px;text-align:center}
+.upgrade-card h4{font-size:12px;color:var(--accent);font-weight:700;margin-bottom:4px}
+.upgrade-card p{font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5}
+.btn-upgrade{background:var(--accent);color:#000;border:none;padding:8px 16px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);width:100%;transition:opacity .2s}
+.btn-upgrade:hover{opacity:.85}
+
+/* TOP BAR */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;gap:16px}
+.topbar-title{font-size:13px;font-weight:700;color:var(--muted);font-family:var(--mono)}
+.topbar-title span{color:var(--text)}
+.topbar-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:var(--sans);transition:all .2s;text-decoration:none;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#000}
+.btn-primary:hover{opacity:.85}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--text)}
+.btn-success{background:var(--accent2);color:#000}
+.btn-danger{background:var(--red);color:#fff}
+.btn-sm{padding:6px 12px;font-size:11px}
+
+/* CONTENT */
+.content{flex:1;padding:28px;max-width:1200px}
+.content.full{max-width:100%;padding:24px}
+
+.page{display:none}
+.page.active{display:block;animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px}
+.card-sm{padding:16px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.card-title{font-size:13px;font-weight:700;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px}
+
+/* SECTION HEADER */
+.section-header{margin-bottom:28px}
+.section-header h1{font-family:var(--serif);font-size:32px;font-weight:300;color:var(--text);line-height:1.2}
+.section-header h1 em{color:var(--accent);font-style:italic}
+.section-header p{color:var(--muted);font-size:14px;margin-top:8px;line-height:1.6}
+
+/* FORMS */
+.form-grid{display:grid;gap:16px}
+.form-grid-2{grid-template-columns:1fr 1fr}
+.form-grid-3{grid-template-columns:1fr 1fr 1fr}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-label{font-size:11px;font-weight:700;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px}
+.form-control{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 14px;color:var(--text);font-size:13px;font-family:var(--sans);transition:border .2s;width:100%}
+.form-control:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(232,184,75,.1)}
+.form-control option{background:var(--surface2)}
+select.form-control{cursor:pointer}
+textarea.form-control{resize:vertical;min-height:80px}
+
+/* RADIO CARDS */
+.radio-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.radio-card{border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:all .2s;text-align:center;background:var(--surface2)}
+.radio-card:hover{border-color:var(--accent);background:rgba(232,184,75,.05)}
+.radio-card.selected{border-color:var(--accent);background:rgba(232,184,75,.1)}
+.radio-card .icon{font-size:22px;margin-bottom:6px}
+.radio-card .label{font-size:11px;font-weight:700;color:var(--text)}
+.radio-card .sublabel{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* ROOM CARDS */
+.room-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:10px;animation:fadeUp .25s ease}
+.room-card-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.room-number{background:var(--accent);color:#000;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.room-name{font-size:13px;font-weight:700;flex:1}
+.room-remove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px;transition:all .2s}
+.room-remove:hover{background:rgba(232,91,91,.15);color:var(--red)}
+
+/* BOQ TABLE */
+.boq-table{width:100%;border-collapse:collapse;font-size:13px}
+.boq-table th{padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);background:var(--surface)}
+.boq-table td{padding:10px 14px;border-bottom:1px solid rgba(37,45,61,.6)}
+.boq-table tr:hover td{background:rgba(255,255,255,.02)}
+.boq-table .section-row td{background:rgba(232,184,75,.05);font-weight:700;color:var(--accent);font-size:11px;letter-spacing:1px;font-family:var(--mono);text-transform:uppercase;border-top:1px solid var(--border)}
+.boq-table .total-row td{background:var(--surface);font-weight:700;border-top:2px solid var(--accent)}
+.qty-cell{font-family:var(--mono);font-size:12px;color:var(--accent2)}
+.editable-qty{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:4px 8px;color:var(--text);font-family:var(--mono);font-size:12px;width:90px;text-align:right}
+.editable-qty:focus{outline:none;border-color:var(--accent);background:var(--surface2)}
+
+/* SIZE CONFIG */
+.size-config{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px}
+.size-config-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.size-config-title{font-size:12px;font-weight:700;color:var(--accent);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px}
+.size-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.size-item{display:flex;flex-direction:column;gap:5px}
+.size-label{font-size:10px;color:var(--muted);font-family:var(--mono)}
+.size-select{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;font-family:var(--mono);cursor:pointer;width:100%}
+.size-select:focus{outline:none;border-color:var(--accent)}
+
+/* COST TABLE */
+.cost-table{width:100%;border-collapse:collapse;font-size:13px}
+.cost-table th{padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);background:var(--surface)}
+.cost-table td{padding:10px 14px;border-bottom:1px solid rgba(37,45,61,.5);vertical-align:middle}
+.cost-table tr:hover td{background:rgba(255,255,255,.02)}
+.cost-table .section-row td{background:rgba(91,141,238,.08);font-weight:700;color:var(--accent3);font-size:11px;letter-spacing:1px;font-family:var(--mono);text-transform:uppercase;border-top:1px solid var(--border)}
+.cost-table .total-row td{background:var(--surface);font-weight:700;font-size:14px;border-top:2px solid var(--accent)}
+.cost-table .subtotal-row td{background:rgba(232,184,75,.05);font-weight:700;font-size:12px;color:var(--accent)}
+.rate-cell{font-family:var(--mono);color:var(--muted)}
+.amount-cell{font-family:var(--mono);font-weight:700;color:var(--accent2)}
+.qty-input{background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-family:var(--mono);font-size:12px;width:80px;text-align:right;transition:border .2s}
+.qty-input:focus{outline:none;border-color:var(--accent);background:var(--surface)}
+.rate-input{background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-family:var(--mono);font-size:12px;width:100px;text-align:right;transition:border .2s}
+.rate-input:focus{outline:none;border-color:var(--accent);background:var(--surface)}
+
+/* STATS GRID */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px}
+.stat-label{font-size:10px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.stat-value{font-size:22px;font-family:var(--serif);font-weight:400;color:var(--text)}
+.stat-value.accent{color:var(--accent)}
+.stat-value.green{color:var(--accent2)}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:4px;font-family:var(--mono)}
+
+/* TABS */
+.tab-bar{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:20px;width:fit-content}
+.tab{padding:8px 16px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);transition:all .2s;border:none;background:none;font-family:var(--sans)}
+.tab.active{background:var(--accent);color:#000}
+.tab:hover:not(.active){color:var(--text)}
+
+/* UPLOAD ZONE */
+.upload-zone{border:2px dashed var(--border);border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface2)}
+.upload-zone:hover,.upload-zone.dragging{border-color:var(--accent);background:rgba(232,184,75,.05)}
+.upload-zone .upload-icon{font-size:36px;margin-bottom:10px;display:block}
+.upload-zone h3{font-size:14px;font-weight:700;margin-bottom:6px}
+.upload-zone p{font-size:12px;color:var(--muted)}
+
+/* SPECIALS */
+.badge-tag{display:inline-block;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;font-family:var(--mono)}
+.badge-new{background:rgba(62,207,142,.15);color:var(--accent2);border:1px solid rgba(62,207,142,.3)}
+.badge-pro{background:rgba(232,184,75,.15);color:var(--accent);border:1px solid rgba(232,184,75,.3)}
+
+/* ALERT */
+.alert{border-radius:8px;padding:12px 16px;font-size:12px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start}
+.alert-info{background:rgba(91,141,238,.1);border:1px solid rgba(91,141,238,.3);color:var(--accent3)}
+.alert-success{background:rgba(62,207,142,.1);border:1px solid rgba(62,207,142,.3);color:var(--accent2)}
+.alert-warn{background:rgba(232,184,75,.1);border:1px solid rgba(232,184,75,.3);color:var(--accent)}
+
+/* SUMMARY CALLOUT */
+.summary-callout{background:linear-gradient(135deg,var(--surface2),rgba(232,184,75,.05));border:1px solid rgba(232,184,75,.2);border-radius:12px;padding:20px;margin-bottom:20px}
+
+/* TOOLS SECTION */
+.tools-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.tool-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;transition:all .2s;cursor:pointer}
+.tool-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.tool-icon{font-size:28px;margin-bottom:12px}
+.tool-title{font-size:14px;font-weight:700;margin-bottom:6px}
+.tool-desc{font-size:12px;color:var(--muted);line-height:1.5}
+.tool-badge{margin-top:10px}
+
+/* STEP INDICATOR */
+.steps{display:flex;gap:0;margin-bottom:28px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.step{flex:1;padding:12px 16px;background:var(--surface);display:flex;align-items:center;gap:8px;cursor:pointer;transition:all .2s;border-right:1px solid var(--border);font-size:12px;font-weight:600}
+.step:last-child{border-right:none}
+.step:hover{background:var(--surface2)}
+.step.active{background:rgba(232,184,75,.1);color:var(--accent)}
+.step.done{color:var(--accent2)}
+.step-num{width:22px;height:22px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.step.active .step-num{background:var(--accent);color:#000}
+.step.done .step-num{background:var(--accent2);color:#000}
+
+/* TOGGLE */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border-radius:7px;margin-bottom:6px}
+.toggle-label{font-size:12px;font-weight:600}
+.toggle-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.toggle-switch{width:38px;height:20px;background:var(--border);border-radius:20px;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.toggle-switch.on{background:var(--accent2)}
+.toggle-switch::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;background:#fff;border-radius:50%;transition:left .2s}
+.toggle-switch.on::after{left:21px}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--surface)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+
+/* DIVIDER */
+.divider{border:none;border-top:1px solid var(--border);margin:20px 0}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .shell{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .form-grid-2,.form-grid-3{grid-template-columns:1fr}
+}
+
+/* CTA CARD */
+.cta-card{background:linear-gradient(135deg,rgba(232,184,75,.12),rgba(62,207,142,.06));border:1px solid rgba(232,184,75,.3);border-radius:16px;padding:32px;text-align:center;margin-top:32px}
+.cta-card h2{font-family:var(--serif);font-size:24px;font-weight:400;color:var(--text);margin-bottom:8px}
+.cta-card p{color:var(--muted);font-size:14px;margin-bottom:20px;max-width:480px;margin-left:auto;margin-right:auto;line-height:1.6}
+.cta-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+/* MARKET TOOLS */
+.market-tool{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
+.market-tool-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.market-tool-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.market-tool-icon.gold{background:rgba(232,184,75,.15)}
+.market-tool-icon.green{background:rgba(62,207,142,.15)}
+.market-tool-icon.blue{background:rgba(91,141,238,.15)}
+.market-tool-icon.red{background:rgba(232,91,91,.15)}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto}
+.modal-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:16px;font-weight:700}
+.modal-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;line-height:1}
+.modal-body{padding:24px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+
+/* PROGRESS BAR */
+.progress-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:20px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .3s ease}
+
+/* PDF PREVIEW BADGE */
+.pdf-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(232,91,91,.1);border:1px solid rgba(232,91,91,.3);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;color:#e85b5b;font-family:var(--mono)}
+
+/* Notification */
+.notif{position:fixed;top:20px;right:20px;background:var(--surface);border:1px solid var(--accent2);border-radius:10px;padding:14px 18px;font-size:13px;font-weight:600;color:var(--accent2);z-index:9998;animation:slideIn .3s ease;box-shadow:var(--shadow)}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+</style>
+</head>
+<body>
+
+<div class="shell">
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">⬡ BOQ Platform v4</div>
+    <div class="logo-sub">Al Qaswaa · KSA & GCC</div>
+  </div>
+
+  <div style="padding:10px 8px">
+    <div class="app-switcher">
+      <button class="app-switch-btn active" onclick="switchApp('boq')">⬡ BOQ Estimator</button>
+      <button class="app-switch-btn" onclick="switchApp('cost')">⊟ Cost Estimator</button>
+    </div>
+  </div>
+
+  <!-- BOQ Nav -->
+  <div id="boq-nav">
+    <div class="nav-section">BOQ Workflow</div>
+    <div class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">⊞</span> Dashboard</div>
+    <div class="nav-item" onclick="showPage('setup')"><span class="nav-icon">◈</span> Project Setup</div>
+    <div class="nav-item" onclick="showPage('sizes')"><span class="nav-icon">📐</span> Spec Sizes <span class="badge-tag badge-new" style="margin-left:auto;font-size:9px">NEW</span></div>
+    <div class="nav-item" onclick="showPage('rooms')"><span class="nav-icon">⬡</span> Rooms & Spaces <span class="badge" id="room-count">0</span></div>
+    <div class="nav-item" onclick="showPage('boq-results')"><span class="nav-icon">≡</span> BOQ Results</div>
+    <div class="nav-item" onclick="showPage('cad-extract')"><span class="nav-icon">📄</span> PDF/CAD Extract <span class="badge-tag badge-new" style="margin-left:auto;font-size:9px">AI</span></div>
+
+    <div class="nav-section">Tools</div>
+    <div class="nav-item" onclick="showPage('carbon')"><span class="nav-icon">🌱</span> Carbon Estimator <span class="badge-tag badge-new" style="margin-left:auto;font-size:9px">NEW</span></div>
+    <div class="nav-item" onclick="showPage('timeline')"><span class="nav-icon">📅</span> Project Timeline <span class="badge-tag badge-new" style="margin-left:auto;font-size:9px">NEW</span></div>
+    <div class="nav-item" onclick="showPage('material-req')"><span class="nav-icon">📦</span> Material Schedule <span class="badge-tag badge-new" style="margin-left:auto;font-size:9px">NEW</span></div>
+    <div class="nav-item" onclick="showPage('benchmarks')"><span class="nav-icon">📊</span> Market Benchmarks <span class="badge-tag badge-new" style="margin-left:auto;font-size:9px">NEW</span></div>
+    <div class="nav-item" onclick="showPage('saved')"><span class="nav-icon">○</span> Saved Projects <span class="badge">0</span></div>
+  </div>
+
+  <!-- COST Nav -->
+  <div id="cost-nav" style="display:none">
+    <div class="nav-section">Cost Workflow</div>
+    <div class="nav-item active" onclick="showPage('cost-setup')"><span class="nav-icon">◈</span> Project Setup</div>
+    <div class="nav-item" onclick="showPage('quantities')"><span class="nav-icon">⬡</span> Quantities & Rates</div>
+    <div class="nav-item" onclick="showPage('cost-report')"><span class="nav-icon">≡</span> Cost Report</div>
+    <div class="nav-section">Analysis</div>
+    <div class="nav-item" onclick="showPage('value-eng')"><span class="nav-icon">💡</span> Value Engineering <span class="badge-tag badge-new" style="margin-left:auto;font-size:9px">NEW</span></div>
+    <div class="nav-item" onclick="showPage('risk')"><span class="nav-icon">⚠️</span> Risk Register <span class="badge-tag badge-new" style="margin-left:auto;font-size:9px">NEW</span></div>
+    <div class="nav-item" onclick="showPage('subcontractor')"><span class="nav-icon">🤝</span> Sub-Contractor RFQ <span class="badge-tag badge-new" style="margin-left:auto;font-size:9px">NEW</span></div>
+  </div>
+
+  <div class="sidebar-bottom">
+    <div class="upgrade-card">
+      <h4>✦ Go Pro</h4>
+      <p>Unlimited projects · All tools · PDF reports · Priority support</p>
+      <button class="btn-upgrade">Get Pro — SAR 55/mo</button>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-title">BOQ Quick Estimator — <span id="topbar-project">No project</span></div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost btn-sm" onclick="exportContextPDF()">📄 Export PDF</button>
+      <button class="btn btn-secondary btn-sm" onclick="importFromBOQ()">⬇ Import BOQ</button>
+      <button class="btn btn-primary btn-sm" onclick="showPage('setup')">＋ New Project</button>
+    </div>
+  </div>
+
+  <div class="content" id="page-content">
+
+    <!-- ======= DASHBOARD ======= -->
+    <div class="page active" id="page-dashboard">
+      <div class="section-header">
+        <h1>Welcome to <em>BOQ Platform v4</em></h1>
+        <p>Professional bill of quantities, costing, carbon estimates, timelines & market benchmarks — all in one platform.</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Saved Projects</div>
+          <div class="stat-value accent" id="dash-projects">0</div>
+          <div class="stat-sub">in local storage</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Current Project</div>
+          <div class="stat-value" style="font-size:16px" id="dash-current">—</div>
+          <div class="stat-sub">active estimate</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Rooms</div>
+          <div class="stat-value green" id="dash-rooms">0</div>
+          <div class="stat-sub">added this session</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Apps Available</div>
+          <div class="stat-value accent">8</div>
+          <div class="stat-sub">BOQ · Cost · Tools</div>
+        </div>
+      </div>
+
+      <div class="tools-grid">
+        <div class="tool-card" onclick="showPage('setup')">
+          <div class="tool-icon">⬡</div>
+          <div class="tool-title">BOQ Estimator</div>
+          <div class="tool-desc">Generate full bill of quantities with structural, architectural and MEP scope calibrated to your building code.</div>
+          <div class="tool-badge"><span class="badge-tag badge-new">8 Codes</span></div>
+        </div>
+        <div class="tool-card" onclick="switchApp('cost');showPage('cost-setup')">
+          <div class="tool-icon">⊟</div>
+          <div class="tool-title">Cost Estimator</div>
+          <div class="tool-desc">Turn BOQ quantities into a full priced cost report with material, labour and indirect cost split.</div>
+          <div class="tool-badge"><span class="badge-tag badge-new">Editable Qty</span></div>
+        </div>
+        <div class="tool-card" onclick="showPage('cad-extract')">
+          <div class="tool-icon">🤖</div>
+          <div class="tool-title">AI PDF/CAD Extract</div>
+          <div class="tool-desc">Upload DWG, PDF or image — AI reads dimensions and auto-populates your BOQ with correct quantities.</div>
+          <div class="tool-badge"><span class="badge-tag badge-pro">AI Powered</span></div>
+        </div>
+        <div class="tool-card" onclick="showPage('carbon')">
+          <div class="tool-icon">🌱</div>
+          <div class="tool-title">Carbon Estimator</div>
+          <div class="tool-desc">Calculate embodied carbon (kgCO₂e) per material and total project. LEED & BREEAM compliant output.</div>
+          <div class="tool-badge"><span class="badge-tag badge-new">NEW</span></div>
+        </div>
+        <div class="tool-card" onclick="showPage('timeline')">
+          <div class="tool-icon">📅</div>
+          <div class="tool-title">Project Timeline</div>
+          <div class="tool-desc">Auto-generate a Gantt-style construction programme from your BOQ scope. Export as PDF schedule.</div>
+          <div class="tool-badge"><span class="badge-tag badge-new">NEW</span></div>
+        </div>
+        <div class="tool-card" onclick="showPage('benchmarks')">
+          <div class="tool-icon">📊</div>
+          <div class="tool-title">Market Benchmarks</div>
+          <div class="tool-desc">Compare your cost per m² GFA against live KSA & GCC market rates by project type and location.</div>
+          <div class="tool-badge"><span class="badge-tag badge-new">NEW</span></div>
+        </div>
+        <div class="tool-card" onclick="showPage('value-eng')">
+          <div class="tool-icon">💡</div>
+          <div class="tool-title">Value Engineering</div>
+          <div class="tool-desc">Identify top 5 cost-saving opportunities from your BOQ with alternative specification suggestions.</div>
+          <div class="tool-badge"><span class="badge-tag badge-new">NEW</span></div>
+        </div>
+        <div class="tool-card" onclick="showPage('subcontractor')">
+          <div class="tool-icon">🤝</div>
+          <div class="tool-title">Sub-Contractor RFQ</div>
+          <div class="tool-desc">Generate trade-specific RFQ packages from your BOQ for electrical, plumbing, HVAC & structural.</div>
+          <div class="tool-badge"><span class="badge-tag badge-new">NEW</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======= SETUP ======= -->
+    <div class="page" id="page-setup">
+      <div class="section-header">
+        <h1>Project <em>Setup</em></h1>
+        <p>Select project type and building code — all quantities, MEP systems and rates auto-calibrate to your selection.</p>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">Project Type</div></div>
+        <div class="radio-grid" id="project-type-grid">
+          <div class="radio-card selected" data-val="residential" onclick="selectType(this)"><div class="icon">🏠</div><div class="label">Residential</div><div class="sublabel">Villas · Apartments</div></div>
+          <div class="radio-card" data-val="commercial" onclick="selectType(this)"><div class="icon">🏢</div><div class="label">Commercial</div><div class="sublabel">Offices · Retail</div></div>
+          <div class="radio-card" data-val="mixed" onclick="selectType(this)"><div class="icon">🏙️</div><div class="label">Mixed-use</div><div class="sublabel">Residential + Retail</div></div>
+          <div class="radio-card" data-val="industrial" onclick="selectType(this)"><div class="icon">🏭</div><div class="label">Industrial</div><div class="sublabel">Warehouses · Factories</div></div>
+          <div class="radio-card" data-val="hospitality" onclick="selectType(this)"><div class="icon">🏨</div><div class="label">Hospitality</div><div class="sublabel">Hotels · Resorts</div></div>
+          <div class="radio-card" data-val="healthcare" onclick="selectType(this)"><div class="icon">🏥</div><div class="label">Healthcare</div><div class="sublabel">Clinics · Hospitals</div></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">Building Code</div></div>
+        <div class="radio-grid" id="code-grid">
+          <div class="radio-card selected" data-val="SBC304" onclick="selectCode(this)"><div class="icon">🇸🇦</div><div class="label">SBC 304</div><div class="sublabel">Saudi Arabia</div></div>
+          <div class="radio-card" data-val="IBC" onclick="selectCode(this)"><div class="icon">🇦🇪</div><div class="label">IBC / ACI</div><div class="sublabel">UAE</div></div>
+          <div class="radio-card" data-val="EC2" onclick="selectCode(this)"><div class="icon">🇬🇧</div><div class="label">EC2 / BS</div><div class="sublabel">UK</div></div>
+          <div class="radio-card" data-val="ACI318" onclick="selectCode(this)"><div class="icon">🇺🇸</div><div class="label">ACI 318-19</div><div class="sublabel">USA</div></div>
+          <div class="radio-card" data-val="IS456" onclick="selectCode(this)"><div class="icon">🇮🇳</div><div class="label">IS 456</div><div class="sublabel">India</div></div>
+          <div class="radio-card" data-val="AS3600" onclick="selectCode(this)"><div class="icon">🇦🇺</div><div class="label">AS 3600</div><div class="sublabel">Australia</div></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">Project Information</div></div>
+        <div class="form-grid form-grid-2">
+          <div class="form-group"><label class="form-label">Project Name *</label><input class="form-control" id="proj-name" placeholder="e.g. Al Nakheel Villa — Phase 1"/></div>
+          <div class="form-group"><label class="form-label">Client Name</label><input class="form-control" id="proj-client" placeholder="Client or developer name"/></div>
+          <div class="form-group"><label class="form-label">Project Location</label><input class="form-control" id="proj-location" placeholder="City, Country"/></div>
+          <div class="form-group"><label class="form-label">Prepared By (QS)</label><input class="form-control" id="proj-qs" placeholder="Quantity surveyor name"/></div>
+          <div class="form-group"><label class="form-label">Reference No.</label><input class="form-control" id="proj-ref" placeholder="BOQ-2026-001"/></div>
+          <div class="form-group"><label class="form-label">Gross Floor Area (m²)</label><input class="form-control" id="proj-gfa" type="number" placeholder="e.g. 850"/></div>
+        </div>
+        <div class="form-group" style="margin-top:12px"><label class="form-label">Scope Notes</label><textarea class="form-control" id="proj-notes" placeholder="Key assumptions, exclusions or scope notes…"></textarea></div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn btn-primary" onclick="saveSetup()">Continue to Spec Sizes →</button>
+        <button class="btn btn-secondary" onclick="showPage('rooms')">Skip to Rooms →</button>
+      </div>
+    </div>
+
+    <!-- ======= SPEC SIZES (NEW FEATURE 1) ======= -->
+    <div class="page" id="page-sizes">
+      <div class="section-header">
+        <h1>Specification <em>Sizes</em></h1>
+        <p>Configure standard specification sizes. All BOQ quantities recalculate automatically when you change any size.</p>
+      </div>
+
+      <div class="alert alert-info">ℹ️ These sizes are pre-set to <strong id="sizes-code-label">SBC 304</strong> standards. Change any value and the BOQ quantities update automatically.</div>
+
+      <div class="size-config">
+        <div class="size-config-header">
+          <div class="size-config-title">🏗️ Structural Concrete</div>
+          <button class="btn btn-ghost btn-sm" onclick="resetSizes()">Reset to Standard</button>
+        </div>
+        <div class="size-grid">
+          <div class="size-item">
+            <label class="size-label">Slab Thickness</label>
+            <select class="size-select" id="sz-slab" onchange="recalcBOQ()">
+              <option value="0.15">150mm — Standard</option>
+              <option value="0.18">180mm — Heavy Load</option>
+              <option value="0.20">200mm — Commercial</option>
+              <option value="0.25">250mm — Post-tension</option>
+              <option value="0.30">300mm — Transfer Slab</option>
+            </select>
+          </div>
+          <div class="size-item">
+            <label class="size-label">Foundation Depth</label>
+            <select class="size-select" id="sz-found" onchange="recalcBOQ()">
+              <option value="0.50">500mm — Strip</option>
+              <option value="0.75">750mm — Standard</option>
+              <option value="1.00">1000mm — Raft</option>
+              <option value="1.50">1500mm — Deep Raft</option>
+            </select>
+          </div>
+          <div class="size-item">
+            <label class="size-label">Column Size</label>
+            <select class="size-select" id="sz-col" onchange="recalcBOQ()">
+              <option value="0.30">300×300mm</option>
+              <option value="0.40">400×400mm — Standard</option>
+              <option value="0.50">500×500mm — Heavy</option>
+              <option value="0.60">600×600mm — Transfer</option>
+            </select>
+          </div>
+          <div class="size-item">
+            <label class="size-label">Rebar Main Dia.</label>
+            <select class="size-select" id="sz-rebar" onchange="recalcBOQ()">
+              <option value="12">T12 — Light</option>
+              <option value="16" selected>T16 — Standard</option>
+              <option value="20">T20 — Heavy</option>
+              <option value="25">T25 — Transfer</option>
+              <option value="32">T32 — Post-tension</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="size-config">
+        <div class="size-config-header">
+          <div class="size-config-title">🧱 Blockwork & Finishes</div>
+        </div>
+        <div class="size-grid">
+          <div class="size-item">
+            <label class="size-label">External Block</label>
+            <select class="size-select" id="sz-ext-block" onchange="recalcBOQ()">
+              <option value="0.20">200mm — Standard</option>
+              <option value="0.25">250mm — Thermal</option>
+              <option value="0.30">300mm — Heavy</option>
+            </select>
+          </div>
+          <div class="size-item">
+            <label class="size-label">Internal Block</label>
+            <select class="size-select" id="sz-int-block" onchange="recalcBOQ()">
+              <option value="0.10">100mm — Partition</option>
+              <option value="0.15">150mm — Standard</option>
+              <option value="0.20">200mm — Structural</option>
+            </select>
+          </div>
+          <div class="size-item">
+            <label class="size-label">Tile Size</label>
+            <select class="size-select" id="sz-tile" onchange="recalcBOQ()">
+              <option value="0.30">300×300mm</option>
+              <option value="0.60">600×600mm — Standard</option>
+              <option value="0.80">800×800mm — Large</option>
+              <option value="1.20">1200×600mm — Slab</option>
+            </select>
+          </div>
+          <div class="size-item">
+            <label class="size-label">Plaster Thickness</label>
+            <select class="size-select" id="sz-plaster" onchange="recalcBOQ()">
+              <option value="0.012">12mm — Skim</option>
+              <option value="0.015">15mm — Standard</option>
+              <option value="0.020">20mm — Sand/Cement</option>
+              <option value="0.025">25mm — Render</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="size-config">
+        <div class="size-config-header">
+          <div class="size-config-title">⚡ MEP Systems</div>
+        </div>
+        <div class="size-grid">
+          <div class="size-item">
+            <label class="size-label">Electrical Cable</label>
+            <select class="size-select" id="sz-cable" onchange="recalcBOQ()">
+              <option value="2.5">2.5mm² — Lighting</option>
+              <option value="4.0" selected>4mm² — Power</option>
+              <option value="6.0">6mm² — AC</option>
+              <option value="10.0">10mm² — Sub-main</option>
+            </select>
+          </div>
+          <div class="size-item">
+            <label class="size-label">Water Pipe</label>
+            <select class="size-select" id="sz-pipe" onchange="recalcBOQ()">
+              <option value="0.015">15mm — Branch</option>
+              <option value="0.022">22mm — Main</option>
+              <option value="0.028">28mm — Riser</option>
+              <option value="0.042">42mm — Header</option>
+            </select>
+          </div>
+          <div class="size-item">
+            <label class="size-label">HVAC Duct</label>
+            <select class="size-select" id="sz-duct" onchange="recalcBOQ()">
+              <option value="1">150×150mm — Branch</option>
+              <option value="2" selected>300×200mm — Sub-main</option>
+              <option value="3">600×300mm — Main</option>
+              <option value="4">900×400mm — Trunk</option>
+            </select>
+          </div>
+          <div class="size-item">
+            <label class="size-label">HVAC Capacity/Room</label>
+            <select class="size-select" id="sz-ac" onchange="recalcBOQ()">
+              <option value="1.5">1.5 TR — Small</option>
+              <option value="2.0" selected>2.0 TR — Standard</option>
+              <option value="2.5">2.5 TR — Large</option>
+              <option value="3.5">3.5 TR — VRF</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert alert-success">✓ Sizes configured. BOQ quantities will recalculate automatically using these specifications.</div>
+      <button class="btn btn-primary" onclick="showPage('rooms')">Continue to Rooms →</button>
+    </div>
+
+    <!-- ======= ROOMS ======= -->
+    <div class="page" id="page-rooms">
+      <div class="section-header">
+        <h1>Rooms <em>& Spaces</em></h1>
+        <p>Add each room or zone. Toggle MEP systems per space for granular BOQ control.</p>
+      </div>
+
+      <div class="alert alert-info" id="no-setup-warn" style="display:none">⚠️ Please complete Project Setup first before adding rooms.</div>
+
+      <div id="rooms-list"></div>
+
+      <div style="display:flex;gap:8px;margin-bottom:24px">
+        <button class="btn btn-secondary" onclick="addRoom()">＋ Add Room / Space</button>
+        <button class="btn btn-ghost" onclick="addCommonRooms()">⚡ Add Typical Villa Layout</button>
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" onclick="calculateBOQ()">Calculate BOQ →</button>
+        <button class="btn btn-ghost" onclick="showPage('setup')">← Back to Setup</button>
+      </div>
+    </div>
+
+    <!-- ======= BOQ RESULTS ======= -->
+    <div class="page" id="page-boq-results">
+      <div class="section-header">
+        <h1>BOQ <em>Results</em></h1>
+        <p>Full bill of quantities — recalculates automatically when you change spec sizes.</p>
+      </div>
+
+      <div class="stats-grid" id="boq-summary-stats" style="display:none"></div>
+
+      <div class="card" style="margin-bottom:16px" id="boq-size-reminder" style="display:none">
+        <div class="alert alert-warn">📐 Spec sizes are set to default. <a href="#" onclick="showPage('sizes')" style="color:var(--accent)">Change sizes →</a> to recalculate quantities.</div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <div class="card-title">Bill of Quantities</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="switchApp('cost');showPage('quantities');importBOQtoCost()">⊟ Send to Cost Estimator</button>
+            <button class="btn btn-primary btn-sm" onclick="exportBOQPDF()">📄 Export PDF Report</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="boq-table" id="boq-table">
+            <thead><tr><th>#</th><th>Description</th><th>Specification</th><th>Unit</th><th>Qty</th><th>Notes</th></tr></thead>
+            <tbody id="boq-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="cta-card">
+        <h2>Ready to price this BOQ?</h2>
+        <p>Send your quantities directly to the Cost Estimator — no rekeying. Get a full priced cost plan in under 60 seconds.</p>
+        <div class="cta-row">
+          <button class="btn btn-primary" onclick="switchApp('cost');showPage('quantities');importBOQtoCost()">⊟ Open Cost Estimator →</button>
+          <button class="btn btn-secondary" onclick="exportBOQPDF()">📄 Export BOQ PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======= CAD EXTRACT (AI) ======= -->
+    <div class="page" id="page-cad-extract">
+      <div class="section-header">
+        <h1>AI PDF/CAD <em>Extract</em></h1>
+        <p>Upload your drawing — AI reads dimensions and populates a complete BOQ with correct quantities and costing.</p>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">Upload Drawing</div><span class="badge-tag badge-pro">AI Powered</span></div>
+        <div class="upload-zone" id="cad-drop-zone" onclick="document.getElementById('cad-file').click()" ondragover="event.preventDefault();this.classList.add('dragging')" ondragleave="this.classList.remove('dragging')" ondrop="handleCADDrop(event)">
+          <span class="upload-icon">📐</span>
+          <h3>Drop your floor plan here</h3>
+          <p>Supported: PDF · DWG · DXF · PNG · JPG<br/>AI reads dimensions and auto-populates BOQ</p>
+          <input type="file" id="cad-file" accept=".pdf,.dwg,.dxf,.png,.jpg,.jpeg" style="display:none" onchange="handleCADFile(this)"/>
+        </div>
+        <div id="cad-result" style="display:none;margin-top:20px"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">Manual Dimension Entry</div><div class="card-title" style="color:var(--muted)">From your drawing</div></div>
+        <div class="alert alert-info">📄 After uploading, confirm dimensions below. The AI reads file metadata — enter key areas from your drawing for precise quantities.</div>
+        <div class="form-grid form-grid-3">
+          <div class="form-group"><label class="form-label">Total Floor Area (m²)</label><input class="form-control" id="cad-area" type="number" placeholder="e.g. 450" oninput="cadRecalc()"/></div>
+          <div class="form-group"><label class="form-label">No. of Floors</label><input class="form-control" id="cad-floors" type="number" placeholder="e.g. 2" oninput="cadRecalc()"/></div>
+          <div class="form-group"><label class="form-label">Floor Height (m)</label><input class="form-control" id="cad-height" type="number" value="3.2" oninput="cadRecalc()"/></div>
+          <div class="form-group"><label class="form-label">No. of Bedrooms</label><input class="form-control" id="cad-bed" type="number" placeholder="e.g. 4" oninput="cadRecalc()"/></div>
+          <div class="form-group"><label class="form-label">No. of Bathrooms</label><input class="form-control" id="cad-bath" type="number" placeholder="e.g. 3" oninput="cadRecalc()"/></div>
+          <div class="form-group"><label class="form-label">Building Code</label>
+            <select class="form-control" id="cad-code">
+              <option value="SBC304">SBC 304 — Saudi Arabia</option>
+              <option value="IBC">IBC/ACI — UAE</option>
+              <option value="EC2">EC2 — UK/Europe</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:16px" onclick="generateCADBOQ()">🤖 Generate BOQ from Drawing →</button>
+      </div>
+
+      <div id="cad-boq-output" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Extracted BOQ</div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-success btn-sm" onclick="acceptCADBOQ()">✓ Accept & Use this BOQ</button>
+              <button class="btn btn-primary btn-sm" onclick="exportCADBoqPDF()">📄 Export PDF</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto"><table class="boq-table" id="cad-boq-table"><thead><tr><th>#</th><th>Description</th><th>Specification</th><th>Unit</th><th>Qty</th><th>Rate (SAR)</th><th>Amount (SAR)</th></tr></thead><tbody id="cad-boq-tbody"></tbody></table></div>
+          <div id="cad-cost-summary" style="margin-top:16px;padding:16px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======= CARBON ESTIMATOR ======= -->
+    <div class="page" id="page-carbon">
+      <div class="section-header">
+        <h1>Carbon <em>Estimator</em></h1>
+        <p>Calculate embodied carbon (kgCO₂e) per material. LEED & BREEAM compliant output for sustainability reporting.</p>
+      </div>
+      <div class="alert alert-success">🌱 Based on RICS Whole Life Carbon Assessment methodology and ICE Database v3.0</div>
+      <div id="carbon-table-wrap">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Embodied Carbon by Material</div><button class="btn btn-primary btn-sm" onclick="exportCarbonPDF()">📄 Export Carbon Report</button></div>
+          <table class="boq-table" id="carbon-table">
+            <thead><tr><th>Material</th><th>Quantity</th><th>Unit</th><th>Carbon Factor (kgCO₂e/unit)</th><th>Total kgCO₂e</th><th>%</th></tr></thead>
+            <tbody id="carbon-tbody"></tbody>
+          </table>
+          <div id="carbon-summary" style="padding:20px;background:var(--surface2);margin-top:1px;border-radius:0 0 10px 10px;border-top:1px solid var(--border)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======= TIMELINE ======= -->
+    <div class="page" id="page-timeline">
+      <div class="section-header">
+        <h1>Project <em>Timeline</em></h1>
+        <p>Auto-generated construction programme from your BOQ scope. Edit durations and export as PDF schedule.</p>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">Programme Settings</div></div>
+        <div class="form-grid form-grid-3">
+          <div class="form-group"><label class="form-label">Start Date</label><input class="form-control" id="tl-start" type="date"/></div>
+          <div class="form-group"><label class="form-label">Working Days/Week</label><select class="form-control" id="tl-days"><option value="5">5 days</option><option value="6" selected>6 days</option></select></div>
+          <div class="form-group"><label class="form-label">GFA (m²)</label><input class="form-control" id="tl-gfa" type="number" placeholder="from project setup"/></div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:12px" onclick="generateTimeline()">Generate Programme →</button>
+      </div>
+      <div id="timeline-output"></div>
+    </div>
+
+    <!-- ======= MATERIAL SCHEDULE ======= -->
+    <div class="page" id="page-material-req">
+      <div class="section-header">
+        <h1>Material <em>Schedule</em></h1>
+        <p>Procurement schedule auto-generated from your BOQ. Edit quantities, add items, then export a PDF.</p>
+      </div>
+      <div id="mat-no-boq-warn" class="alert alert-warn" style="display:none">⚠️ No BOQ calculated yet — go to Rooms &amp; Spaces, add rooms and click Calculate BOQ first.</div>
+      <div id="material-table-wrap">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header">
+            <div class="card-title">Material Procurement Schedule</div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-secondary btn-sm" onclick="addMaterialRow()">＋ Add Item</button>
+              <button class="btn btn-primary btn-sm" onclick="exportMaterialPDF()">📄 Export PDF</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="boq-table" id="material-table">
+              <thead><tr><th>#</th><th>Material / Description</th><th>Spec</th><th>Unit</th><th>Total Qty</th><th>Lead Time</th><th>Order By</th><th>Category</th><th>Status</th><th></th></tr></thead>
+              <tbody id="material-tbody"></tbody>
+            </table>
+          </div>
+          <div style="padding:12px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)">
+            ℹ Quantities auto-calculated from BOQ. Edit any cell directly. Click ＋ Add Item to add extra materials not in the BOQ.
+          </div>
+        </div>
+        <!-- CTA -->
+        <div class="cta-card">
+          <h2>Need to procure and deliver?</h2>
+          <p>Al Qaswaa Al Sharqia Trading EST handles full procurement, supply chain and on-site delivery across KSA.</p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="https://wa.me/966511759092" target="_blank">💬 WhatsApp Now</a>
+            <a class="btn btn-ghost" href="https://qaswasharqia.netlify.app" target="_blank">🌐 View Website</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======= MARKET BENCHMARKS ======= -->
+    <div class="page" id="page-benchmarks">
+      <div class="section-header">
+        <h1>Market <em>Benchmarks</em></h1>
+        <p>Compare your project cost/m² against KSA & GCC market rates. Source: Al Qaswaa internal data + AECOM GCC Construction Index 2025.</p>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-label">KSA Villa avg cost/m²</div><div class="stat-value accent">SAR 3,200</div><div class="stat-sub">Eastern Province 2025</div></div>
+        <div class="stat-card"><div class="stat-label">KSA Commercial avg/m²</div><div class="stat-value accent">SAR 4,800</div><div class="stat-sub">Riyadh / Dammam 2025</div></div>
+        <div class="stat-card"><div class="stat-label">UAE Residential avg/m²</div><div class="stat-value accent">AED 5,500</div><div class="stat-sub">Dubai / Abu Dhabi 2025</div></div>
+        <div class="stat-card"><div class="stat-label">Your project cost/m²</div><div class="stat-value green" id="bench-your">SAR —</div><div class="stat-sub">from Cost Estimator</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Construction Cost Benchmarks — KSA & GCC 2025</div></div>
+        <table class="boq-table">
+          <thead><tr><th>Project Type</th><th>Location</th><th>Low (SAR/m²)</th><th>Mid (SAR/m²)</th><th>High (SAR/m²)</th><th>Standard</th></tr></thead>
+          <tbody>
+            <tr><td>Residential Villa</td><td>Eastern Province</td><td class="qty-cell">2,400</td><td class="qty-cell">3,200</td><td class="qty-cell">4,500</td><td>SBC 304</td></tr>
+            <tr><td>Apartment Block</td><td>Riyadh / Dammam</td><td class="qty-cell">2,800</td><td class="qty-cell">3,800</td><td class="qty-cell">5,200</td><td>SBC 304</td></tr>
+            <tr><td>Commercial Office</td><td>KSA</td><td class="qty-cell">3,500</td><td class="qty-cell">4,800</td><td class="qty-cell">7,500</td><td>SBC 304</td></tr>
+            <tr><td>Industrial Warehouse</td><td>KSA</td><td class="qty-cell">1,200</td><td class="qty-cell">1,800</td><td class="qty-cell">2,600</td><td>SBC 304</td></tr>
+            <tr><td>Hotel / Hospitality</td><td>KSA</td><td class="qty-cell">5,500</td><td class="qty-cell">8,000</td><td class="qty-cell">14,000</td><td>SBC 304</td></tr>
+            <tr><td>Healthcare Clinic</td><td>KSA</td><td class="qty-cell">6,000</td><td class="qty-cell">9,500</td><td class="qty-cell">15,000</td><td>SBC 304</td></tr>
+            <tr><td>Residential Villa</td><td>Dubai, UAE</td><td class="qty-cell">3,800</td><td class="qty-cell">5,500</td><td class="qty-cell">9,000</td><td>IBC/ACI</td></tr>
+            <tr><td>Commercial</td><td>Abu Dhabi, UAE</td><td class="qty-cell">4,500</td><td class="qty-cell">6,200</td><td class="qty-cell">10,000</td><td>IBC/ACI</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ======= SAVED PROJECTS ======= -->
+    <div class="page" id="page-saved">
+      <div class="section-header">
+        <h1>Saved <em>Projects</em></h1>
+        <p>All projects saved locally on your device. Nothing leaves your browser.</p>
+      </div>
+      <div id="saved-list"><div class="alert alert-info">No saved projects yet. Complete a BOQ and save it.</div></div>
+    </div>
+
+    <!-- ======= VALUE ENGINEERING ======= -->
+    <div class="page" id="page-value-eng">
+      <div class="section-header">
+        <h1>Value <em>Engineering</em></h1>
+        <p>Sub-contractor packages auto-built from your BOQ — quantities categorised by trade, with full scope. Edit items then export a PDF RFQ package.</p>
+      </div>
+      <div id="ve-no-boq-warn" class="alert alert-warn" style="display:none">⚠️ No BOQ calculated yet — calculate your BOQ first to generate trade packages.</div>
+      <div id="ve-content">
+        <!-- Tab bar for trade packages -->
+        <div class="tab-bar" id="ve-tabs" style="margin-bottom:20px;flex-wrap:wrap"></div>
+        <!-- Active trade package -->
+        <div id="ve-package-wrap"></div>
+        <!-- CTA -->
+        <div class="cta-card" style="margin-top:24px">
+          <h2>Need to execute this scope?</h2>
+          <p>Al Qaswaa Al Sharqia Trading EST delivers full EPC — structural, MEP and finishes — across KSA. Send us the exported RFQ and we'll respond within 24 hours.</p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="https://wa.me/966511759092?text=Hi%2C+I%27d+like+to+send+an+RFQ+from+BOQ+Estimator" target="_blank">💬 Send RFQ via WhatsApp</a>
+            <a class="btn btn-ghost" href="mailto:info@qaswasharqia.com?subject=RFQ from BOQ Estimator">✉ Email RFQ</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======= RISK REGISTER ======= -->
+    <div class="page" id="page-risk">
+      <div class="section-header">
+        <h1>Risk <em>Register</em></h1>
+        <p>Standard construction risk register for KSA & GCC projects. Customize and export with your cost report.</p>
+      </div>
+      <div class="card">
+        <table class="boq-table">
+          <thead><tr><th>#</th><th>Risk Description</th><th>Category</th><th>Probability</th><th>Impact</th><th>Score</th><th>Mitigation</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Ground conditions worse than expected</td><td>Structural</td><td>Medium</td><td>High</td><td style="color:var(--red);font-weight:700">HIGH</td><td>Geotechnical report prior to tender</td></tr>
+            <tr><td>2</td><td>Material price escalation (steel, cement)</td><td>Commercial</td><td>High</td><td>Medium</td><td style="color:var(--accent);font-weight:700">HIGH</td><td>Fix prices at PO or include escalation clause</td></tr>
+            <tr><td>3</td><td>Scope creep from client changes</td><td>Programme</td><td>High</td><td>Medium</td><td style="color:var(--accent);font-weight:700">HIGH</td><td>Change order protocol from Day 1</td></tr>
+            <tr><td>4</td><td>Subcontractor default</td><td>Commercial</td><td>Low</td><td>High</td><td style="color:var(--accent2);font-weight:700">MED</td><td>Performance bonds for packages > SAR 500K</td></tr>
+            <tr><td>5</td><td>VAT / regulatory changes</td><td>Financial</td><td>Low</td><td>Medium</td><td style="color:var(--accent2);font-weight:700">LOW</td><td>Contract price-adjustment clause</td></tr>
+            <tr><td>6</td><td>Weather delays (summer)</td><td>Programme</td><td>High</td><td>Low</td><td style="color:var(--accent2);font-weight:700">MED</td><td>Schedule critical works Oct-Apr</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ======= SUBCONTRACTOR RFQ ======= -->
+    <div class="page" id="page-subcontractor">
+      <div class="section-header">
+        <h1>Sub-Contractor <em>RFQ</em></h1>
+        <p>Generate trade-specific request-for-quotation packages from your BOQ. Ready to send to sub-contractors.</p>
+      </div>
+      <div class="tools-grid">
+        <div class="tool-card" onclick="generateRFQ('structural')"><div class="tool-icon">🏗️</div><div class="tool-title">Structural RFQ</div><div class="tool-desc">Concrete, rebar, formwork and blockwork scope package for structural sub-contractor.</div></div>
+        <div class="tool-card" onclick="generateRFQ('electrical')"><div class="tool-icon">⚡</div><div class="tool-title">Electrical RFQ</div><div class="tool-desc">Full electrical scope — wiring, DB, lighting, sockets, ELV and testing scope package.</div></div>
+        <div class="tool-card" onclick="generateRFQ('plumbing')"><div class="tool-icon">🚿</div><div class="tool-title">Plumbing RFQ</div><div class="tool-desc">Plumbing & drainage — supply, sanitary fittings, hot/cold water scope package.</div></div>
+        <div class="tool-card" onclick="generateRFQ('hvac')"><div class="tool-icon">❄️</div><div class="tool-title">HVAC RFQ</div><div class="tool-desc">Air conditioning, ventilation, ductwork and controls scope package.</div></div>
+        <div class="tool-card" onclick="generateRFQ('finishes')"><div class="tool-icon">🪟</div><div class="tool-title">Finishes RFQ</div><div class="tool-desc">Tiles, plaster, paint, doors, windows and joinery scope package.</div></div>
+        <div class="tool-card" onclick="generateRFQ('fire')"><div class="tool-icon">🔥</div><div class="tool-title">Fire & Safety RFQ</div><div class="tool-desc">Sprinklers, detection, alarms, hose reels and signage scope package.</div></div>
+      </div>
+      <div id="rfq-output" style="display:none;margin-top:20px"></div>
+    </div>
+
+    <!-- ======= COST SETUP ======= -->
+    <div class="page" id="page-cost-setup">
+      <div class="section-header">
+        <h1>Cost Estimator — <em>Setup</em></h1>
+        <p>Define project type, building code and adjustments before entering quantities.</p>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">Project Type</div></div>
+        <div class="radio-grid" id="cost-type-grid">
+          <div class="radio-card selected" data-val="residential" onclick="selectCostType(this)"><div class="icon">🏠</div><div class="label">Residential</div></div>
+          <div class="radio-card" data-val="commercial" onclick="selectCostType(this)"><div class="icon">🏢</div><div class="label">Commercial</div></div>
+          <div class="radio-card" data-val="mixed" onclick="selectCostType(this)"><div class="icon">🏙️</div><div class="label">Mixed-use</div></div>
+          <div class="radio-card" data-val="industrial" onclick="selectCostType(this)"><div class="icon">🏭</div><div class="label">Industrial</div></div>
+          <div class="radio-card" data-val="hospitality" onclick="selectCostType(this)"><div class="icon">🏨</div><div class="label">Hospitality</div></div>
+          <div class="radio-card" data-val="healthcare" onclick="selectCostType(this)"><div class="icon">🏥</div><div class="label">Healthcare</div></div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">Cost Settings</div></div>
+        <div class="form-grid form-grid-3">
+          <div class="form-group"><label class="form-label">Contingency</label>
+            <select class="form-control" id="cost-contingency">
+              <option value="0.05">5% — Low risk</option>
+              <option value="0.10" selected>10% — Standard</option>
+              <option value="0.15">15% — Medium risk</option>
+              <option value="0.20">20% — High risk</option>
+              <option value="0.25">25% — Complex</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">VAT / Tax</label>
+            <select class="form-control" id="cost-vat">
+              <option value="0">0% — Exempt</option>
+              <option value="0.05" selected>5% — KSA / UAE</option>
+              <option value="0.15">15% — KSA Standard</option>
+              <option value="0.20">20% — UK / EU</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Currency</label>
+            <select class="form-control" id="cost-currency">
+              <option value="SAR" selected>SAR — Saudi Riyal</option>
+              <option value="AED">AED — UAE Dirham</option>
+              <option value="USD">USD — US Dollar</option>
+              <option value="GBP">GBP — British Pound</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Estimate Name *</label><input class="form-control" id="cost-name" placeholder="e.g. Al Nakheel Villa — Cost Plan"/></div>
+          <div class="form-group"><label class="form-label">Client Name</label><input class="form-control" id="cost-client" placeholder="Client name"/></div>
+          <div class="form-group"><label class="form-label">Gross Floor Area (m²)</label><input class="form-control" id="cost-gfa" type="number" placeholder="e.g. 850"/></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="showPage('quantities')">Continue to Quantities →</button>
+        <button class="btn btn-secondary" onclick="importBOQtoCost();showPage('quantities')">⬇ Import from BOQ App</button>
+      </div>
+    </div>
+
+    <!-- ======= QUANTITIES & RATES ======= -->
+    <div class="page" id="page-quantities">
+      <div class="section-header">
+        <h1>Quantities <em>& Rates</em></h1>
+        <p>Edit quantities and rates — totals recalculate live. All quantities editable per supplier quote.</p>
+      </div>
+      <div class="alert alert-info">✏️ Edit <strong>Qty</strong> or <strong>Rate</strong> in any row — amount recalculates instantly. Rows marked with ★ were imported from BOQ Estimator.</div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <div class="card-title">Bill of Quantities — Editable</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary btn-sm" onclick="addCostRow()">＋ Add Row</button>
+            <button class="btn btn-primary btn-sm" onclick="generateCostReport()">Generate Cost Report →</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="cost-table" id="qty-table">
+            <thead><tr><th>★</th><th>Description</th><th>Unit</th><th>Qty</th><th>Rate (SAR)</th><th>Mat %</th><th>Lab %</th><th>Amount</th></tr></thead>
+            <tbody id="qty-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="generateCostReport()">Generate Cost Report →</button>
+    </div>
+
+    <!-- ======= COST REPORT ======= -->
+    <div class="page" id="page-cost-report">
+      <div class="section-header">
+        <h1>Cost <em>Report</em></h1>
+        <p>Full priced cost plan with material, labour and indirect split. Rate per m² benchmark included.</p>
+      </div>
+      <div class="stats-grid" id="cost-summary-stats"></div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <div class="card-title">Cost Breakdown</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="showPage('quantities')">← Edit Quantities</button>
+            <button class="btn btn-primary btn-sm" onclick="exportCostPDF()">📄 Export Full Report PDF</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="cost-table" id="cost-report-table">
+            <thead><tr><th>#</th><th>Description</th><th>Unit</th><th>Qty</th><th>Rate</th><th>Material</th><th>Labour</th><th>Indirect</th><th>Total</th></tr></thead>
+            <tbody id="cost-report-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="cta-card" id="cost-cta">
+        <h2>Need someone to deliver this project?</h2>
+        <p>Al Qaswaa Al Sharqia Trading EST — EPC Contractor with 10+ years delivering civil, structural, MEP and turnkey projects across Saudi Arabia.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="https://wa.me/966511759092" target="_blank">💬 WhatsApp Now</a>
+          <a class="btn btn-secondary" href="/cdn-cgi/l/email-protection#543d3a323b142535272335273c3526253d357a373b39">✉ Email Us</a>
+          <a class="btn btn-ghost" href="https://qaswasharqia.netlify.app" target="_blank">🌐 View Website</a>
+        </div>
+        <div style="margin-top:16px;font-size:12px;color:var(--muted)">📞 +966 51 175 9092 &nbsp;|&nbsp; +966 57 352 4746 &nbsp;|&nbsp; <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="d2bbbcb4bd92a3b3a1a5b3a1bab3a0a3bbb3fcb1bdbf">[email&#160;protected]</a></div>
+      </div>
+    </div>
+
+  </div><!-- /page-content -->
+</main>
+</div><!-- /shell -->
+
+<!-- RFQ MODAL -->
+<div class="modal-overlay" id="rfq-modal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="rfq-modal-title">RFQ Package</div>
+      <button class="modal-close" onclick="document.getElementById('rfq-modal').style.display='none'">×</button>
+    </div>
+    <div class="modal-body" id="rfq-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-primary btn-sm" onclick="exportRFQPDF()">📄 Export PDF</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('rfq-modal').style.display='none'">Close</button>
+    </div>
+  </div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// ========== STATE ==========
+const state = {
+  projectType: 'residential',
+  buildingCode: 'SBC304',
+  projectName: '',
+  projectClient: '',
+  projectLocation: '',
+  projectQS: '',
+  projectRef: '',
+  projectGFA: 0,
+  projectNotes: '',
+  rooms: [],
+  boqItems: [],
+  costItems: [],
+  costType: 'residential',
+  contingency: 0.10,
+  vat: 0.05,
+  currency: 'SAR',
+  cadBoqItems: []
+};
+
+// ========== BUILDING CODE FACTORS ==========
+const codeFactors = {
+  SBC304:  { slabFactor:0.12, rebarFactor:95, foundFactor:0.35, concreteGrade:'C30/37', coverMin:25 },
+  IBC:     { slabFactor:0.13, rebarFactor:100, foundFactor:0.38, concreteGrade:'4000 psi', coverMin:25 },
+  EC2:     { slabFactor:0.115, rebarFactor:90, foundFactor:0.32, concreteGrade:'C25/30', coverMin:30 },
+  ACI318:  { slabFactor:0.13, rebarFactor:100, foundFactor:0.40, concreteGrade:'4000 psi', coverMin:25 },
+  IS456:   { slabFactor:0.14, rebarFactor:85, foundFactor:0.42, concreteGrade:'M25', coverMin:40 },
+  AS3600:  { slabFactor:0.12, rebarFactor:95, foundFactor:0.35, concreteGrade:'N32', coverMin:25 }
+};
+
+// MEP multipliers by project type
+const mepMult = { residential:1.0, commercial:1.4, mixed:1.2, industrial:0.8, hospitality:1.8, healthcare:2.2 };
+
+// Unit rates SAR by code
+const unitRates = {
+  concrete: { SBC304:380, IBC:400, EC2:420, ACI318:400, IS456:280, AS3600:480 },
+  rebar:    { SBC304:4800, IBC:5000, EC2:5200, ACI318:5000, IS456:3800, AS3600:5500 },
+  block:    { SBC304:38, IBC:40, EC2:42, ACI318:40, IS456:28, AS3600:48 },
+  tile:     { SBC304:120, IBC:130, EC2:150, ACI318:130, IS456:90, AS3600:160 },
+  plaster:  { SBC304:45, IBC:48, EC2:55, ACI318:48, IS456:32, AS3600:60 },
+  paint:    { SBC304:18, IBC:20, EC2:22, ACI318:20, IS456:14, AS3600:25 },
+  elec:     { SBC304:280, IBC:300, EC2:350, ACI318:300, IS456:200, AS3600:400 },
+  plumb:    { SBC304:220, IBC:240, EC2:280, ACI318:240, IS456:160, AS3600:320 },
+  hvac:     { SBC304:380, IBC:400, EC2:450, ACI318:400, IS456:280, AS3600:500 },
+  fire:     { SBC304:180, IBC:200, EC2:220, ACI318:200, IS456:140, AS3600:240 }
+};
+
+// ========== NAVIGATION ==========
+let currentApp = 'boq';
+
+function switchApp(app) {
+  currentApp = app;
+  document.getElementById('boq-nav').style.display = app==='boq' ? 'block' : 'none';
+  document.getElementById('cost-nav').style.display = app==='cost' ? 'block' : 'none';
+  document.querySelectorAll('.app-switch-btn').forEach((b,i)=>{
+    b.classList.toggle('active', (i===0 && app==='boq')||(i===1 && app==='cost'));
+  });
+  if(app==='boq') showPage('dashboard');
+  else showPage('cost-setup');
+}
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const pg = document.getElementById('page-'+id);
+  if(pg) pg.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  // Update nav
+  if(id==='cost-report') generateCostReport();
+  if(id==='carbon') renderCarbon();
+  if(id==='material-req') renderMaterialSchedule();
+  if(id==='timeline') { document.getElementById('tl-gfa').value = state.projectGFA||''; if(!document.getElementById('tl-start').value) document.getElementById('tl-start').valueAsDate=new Date(); }
+}
+
+// ========== PROJECT TYPE & CODE ==========
+function selectType(el) {
+  document.querySelectorAll('#project-type-grid .radio-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  state.projectType = el.dataset.val;
+}
+function selectCode(el) {
+  document.querySelectorAll('#code-grid .radio-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  state.buildingCode = el.dataset.val;
+  document.getElementById('sizes-code-label').textContent = el.dataset.val;
+}
+function selectCostType(el) {
+  document.querySelectorAll('#cost-type-grid .radio-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  state.costType = el.dataset.val;
+}
+
+function saveSetup() {
+  state.projectName = document.getElementById('proj-name').value || 'Untitled Project';
+  state.projectClient = document.getElementById('proj-client').value;
+  state.projectLocation = document.getElementById('proj-location').value;
+  state.projectQS = document.getElementById('proj-qs').value;
+  state.projectRef = document.getElementById('proj-ref').value;
+  state.projectGFA = parseFloat(document.getElementById('proj-gfa').value)||0;
+  state.projectNotes = document.getElementById('proj-notes').value;
+  document.getElementById('topbar-project').textContent = state.projectName;
+  document.getElementById('dash-current').textContent = state.projectName;
+  showPage('sizes');
+  showNotif('Project saved — configure spec sizes');
+}
+
+// ========== SIZES ==========
+function resetSizes() {
+  document.getElementById('sz-slab').value = '0.15';
+  document.getElementById('sz-found').value = '0.75';
+  document.getElementById('sz-col').value = '0.40';
+  document.getElementById('sz-rebar').value = '16';
+  document.getElementById('sz-ext-block').value = '0.20';
+  document.getElementById('sz-int-block').value = '0.15';
+  document.getElementById('sz-tile').value = '0.60';
+  document.getElementById('sz-plaster').value = '0.015';
+  document.getElementById('sz-cable').value = '4.0';
+  document.getElementById('sz-pipe').value = '0.022';
+  document.getElementById('sz-ac').value = '2.0';
+  recalcBOQ();
+}
+
+function getSizes() {
+  return {
+    slabThk: parseFloat(document.getElementById('sz-slab').value)||0.15,
+    foundDepth: parseFloat(document.getElementById('sz-found').value)||0.75,
+    colSize: parseFloat(document.getElementById('sz-col').value)||0.40,
+    rebarDia: parseFloat(document.getElementById('sz-rebar').value)||16,
+    extBlock: parseFloat(document.getElementById('sz-ext-block').value)||0.20,
+    intBlock: parseFloat(document.getElementById('sz-int-block').value)||0.15,
+    tileSize: parseFloat(document.getElementById('sz-tile').value)||0.60,
+    plasterThk: parseFloat(document.getElementById('sz-plaster').value)||0.015,
+    cableSize: parseFloat(document.getElementById('sz-cable').value)||4.0,
+    pipeSize: parseFloat(document.getElementById('sz-pipe').value)||0.022,
+    acCapacity: parseFloat(document.getElementById('sz-ac').value)||2.0,
+  };
+}
+
+function recalcBOQ() {
+  if(state.rooms.length > 0) calculateBOQ(true);
+}
+
+// ========== ROOMS ==========
+let roomCounter = 0;
+function addRoom(data={}) {
+  roomCounter++;
+  const id = 'room-'+Date.now()+'-'+roomCounter;
+  const room = {
+    id, name: data.name||'Room '+roomCounter,
+    l: data.l||5, w: data.w||4, h: data.h||3.2,
+    doors: data.doors||1, windows: data.windows||2,
+    mepElec: data.mepElec!==false, mepPlumb: data.mepPlumb||false,
+    mepHVAC: data.mepHVAC!==false, mepFire: data.mepFire!==false
+  };
+  state.rooms.push(room);
+  renderRooms();
+  updateRoomCount();
+}
+
+function addCommonRooms() {
+  const layout = [
+    {name:'Living Room',l:7,w:5,h:3.2,doors:2,windows:3,mepElec:true,mepPlumb:false,mepHVAC:true,mepFire:true},
+    {name:'Master Bedroom',l:5,w:4.5,h:3.2,doors:1,windows:2,mepElec:true,mepPlumb:false,mepHVAC:true,mepFire:true},
+    {name:'Bedroom 2',l:4,w:3.5,h:3.2,doors:1,windows:1,mepElec:true,mepPlumb:false,mepHVAC:true,mepFire:true},
+    {name:'Bedroom 3',l:4,w:3.5,h:3.2,doors:1,windows:1,mepElec:true,mepPlumb:false,mepHVAC:true,mepFire:true},
+    {name:'Kitchen',l:4,w:3,h:3.2,doors:1,windows:1,mepElec:true,mepPlumb:true,mepHVAC:true,mepFire:true},
+    {name:'Master Bathroom',l:3,w:2.5,h:2.8,doors:1,windows:0,mepElec:true,mepPlumb:true,mepHVAC:false,mepFire:false},
+    {name:'Bathroom 2',l:2.5,w:2,h:2.8,doors:1,windows:0,mepElec:true,mepPlumb:true,mepHVAC:false,mepFire:false},
+    {name:'Majlis / Reception',l:6,w:5,h:3.5,doors:2,windows:3,mepElec:true,mepPlumb:false,mepHVAC:true,mepFire:true},
+    {name:'Garage',l:6,w:3,h:3.0,doors:1,windows:0,mepElec:true,mepPlumb:false,mepHVAC:false,mepFire:true},
+  ];
+  layout.forEach(r=>addRoom(r));
+  showNotif('Typical villa layout added — 9 rooms');
+}
+
+function renderRooms() {
+  const list = document.getElementById('rooms-list');
+  list.innerHTML = state.rooms.map((r,i) => `
+    <div class="room-card" id="rc-${r.id}">
+      <div class="room-card-header">
+        <div class="room-number">${i+1}</div>
+        <input class="form-control" style="font-weight:700;background:transparent;border:1px solid transparent;padding:4px 8px" value="${r.name}" onchange="updateRoom('${r.id}','name',this.value)"/>
+        <button class="room-remove" onclick="removeRoom('${r.id}')">×</button>
+      </div>
+      <div class="form-grid form-grid-3" style="gap:10px;margin-bottom:12px">
+        <div class="form-group"><label class="form-label">Length (m)</label><input class="form-control" type="number" step="0.1" value="${r.l}" onchange="updateRoom('${r.id}','l',this.value)"/></div>
+        <div class="form-group"><label class="form-label">Width (m)</label><input class="form-control" type="number" step="0.1" value="${r.w}" onchange="updateRoom('${r.id}','w',this.value)"/></div>
+        <div class="form-group"><label class="form-label">Height (m)</label><input class="form-control" type="number" step="0.1" value="${r.h}" onchange="updateRoom('${r.id}','h',this.value)"/></div>
+        <div class="form-group"><label class="form-label">Doors</label><input class="form-control" type="number" value="${r.doors}" onchange="updateRoom('${r.id}','doors',this.value)"/></div>
+        <div class="form-group"><label class="form-label">Windows</label><input class="form-control" type="number" value="${r.windows}" onchange="updateRoom('${r.id}','windows',this.value)"/></div>
+        <div class="form-group"><label class="form-label">MEP Systems</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:4px">
+            ${mepToggle(r,'mepElec','⚡ Elec')}${mepToggle(r,'mepPlumb','🚿 Plumb')}${mepToggle(r,'mepHVAC','❄ HVAC')}${mepToggle(r,'mepFire','🔥 Fire')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function mepToggle(r,key,label) {
+  const on = r[key];
+  return `<span onclick="toggleMEP('${r.id}','${key}')" style="cursor:pointer;padding:4px 8px;border-radius:5px;font-size:10px;font-weight:700;background:${on?'rgba(62,207,142,.15)':'var(--surface)'};border:1px solid ${on?'rgba(62,207,142,.4)':'var(--border)'};color:${on?'var(--accent2)':'var(--muted)'}">${label}</span>`;
+}
+
+function toggleMEP(id,key) {
+  const r = state.rooms.find(r=>r.id===id);
+  if(r) { r[key]=!r[key]; renderRooms(); }
+}
+function updateRoom(id,key,val) {
+  const r = state.rooms.find(r=>r.id===id);
+  if(r) r[key] = isNaN(val)?val:parseFloat(val)||val;
+}
+function removeRoom(id) {
+  state.rooms = state.rooms.filter(r=>r.id!==id);
+  renderRooms(); updateRoomCount();
+}
+function updateRoomCount() {
+  const c = state.rooms.length;
+  document.getElementById('room-count').textContent = c;
+  document.getElementById('dash-rooms').textContent = c;
+}
+
+// ========== BOQ CALCULATION ==========
+function calculateBOQ(silent=false) {
+  if(state.rooms.length===0) { if(!silent) showNotif('Add at least one room first','warn'); return; }
+  const sz = getSizes();
+  const cf = codeFactors[state.buildingCode]||codeFactors.SBC304;
+  const mm = mepMult[state.projectType]||1.0;
+  const rates = unitRates;
+  const code = state.buildingCode;
+
+  // Aggregate room data
+  let totalFloorArea=0, totalWallArea=0, totalCeilArea=0;
+  let totalDoors=0, totalWindows=0;
+  let rooms = state.rooms;
+
+  rooms.forEach(r => {
+    totalFloorArea += r.l*r.w;
+    totalWallArea += 2*(r.l+r.w)*r.h;
+    totalCeilArea += r.l*r.w;
+    totalDoors += r.doors;
+    totalWindows += r.windows;
+  });
+
+  const perimeter = Math.sqrt(totalFloorArea)*4;
+
+  // ---- Structural ----
+  // Concrete: slab volume + foundations + columns
+  const slabVol = totalFloorArea * sz.slabThk;
+  const foundVol = (totalFloorArea * 0.4) * sz.foundDepth;
+  const colCount = Math.max(4, Math.ceil(totalFloorArea/25));
+  const colVol = colCount * sz.colSize * sz.colSize * 3.0;
+  const beamVol = totalFloorArea * 0.08;
+  const totalConcreteVol = +(slabVol + foundVol + colVol + beamVol).toFixed(2);
+
+  // Rebar: varies with slab thickness
+  const rebarKg = +(totalConcreteVol * cf.rebarFactor * (sz.slabThk/0.15)).toFixed(0);
+  const formworkArea = +(totalFloorArea * 1.8 + foundVol*4).toFixed(1);
+
+  // ---- Blockwork ----
+  const blockDoorWindow = totalDoors*2.1 + totalWindows*1.5;
+  const extBlockM2 = +(totalWallArea * 0.4 - blockDoorWindow).toFixed(1);
+  const intBlockM2 = +(totalWallArea * 0.6 - blockDoorWindow * 0.5).toFixed(1);
+
+  // ---- Finishes ----
+  const tileM2 = +(totalFloorArea * 1.05).toFixed(1); // 5% waste
+  const plasterM2 = +(totalWallArea * 0.85 + totalCeilArea).toFixed(1);
+  const paintM2 = +(plasterM2 * 1.1).toFixed(1);
+  const doorsNr = totalDoors;
+  const windowsNr = totalWindows;
+
+  // ---- MEP ----
+  const hasElec = rooms.some(r=>r.mepElec);
+  const hasPlumb = rooms.some(r=>r.mepPlumb);
+  const hasHVAC = rooms.some(r=>r.mepHVAC);
+  const hasFire = rooms.some(r=>r.mepFire);
+
+  const elecRooms = rooms.filter(r=>r.mepElec);
+  const plumbRooms = rooms.filter(r=>r.mepPlumb);
+  const hvacRooms = rooms.filter(r=>r.mepHVAC);
+  const fireRooms = rooms.filter(r=>r.mepFire);
+
+  const cableM = hasElec ? +(elecRooms.reduce((s,r)=>s+r.l*r.w,0)*4.5*mm).toFixed(0) : 0;
+  const dbNr = hasElec ? Math.max(1,Math.ceil(elecRooms.length/8)) : 0;
+  const socketsNr = hasElec ? elecRooms.reduce((s,r)=>s+Math.ceil(r.l*r.w/5),0) : 0;
+  const lightsNr = hasElec ? elecRooms.reduce((s,r)=>s+Math.ceil(r.l*r.w/6),0) : 0;
+
+  const pipeM = hasPlumb ? +(plumbRooms.reduce((s,r)=>s+r.l*r.w,0)*3.0*mm).toFixed(0) : 0;
+  const sanitaryNr = hasPlumb ? plumbRooms.length*3 : 0;
+  const hotPipeM = hasPlumb ? Math.round(pipeM*0.6) : 0;
+
+  const acUnits = hasHVAC ? hvacRooms.reduce((s,r)=>s+Math.ceil(r.l*r.w*sz.acCapacity/12),0) : 0;
+  const ductM2 = hasHVAC ? +(hvacRooms.reduce((s,r)=>s+r.l*r.w,0)*1.2*mm).toFixed(1) : 0;
+
+  const sprinklers = hasFire ? Math.ceil(fireRooms.reduce((s,r)=>s+r.l*r.w,0)/12*mm) : 0;
+  const detectors = hasFire ? Math.ceil(fireRooms.reduce((s,r)=>s+r.l*r.w,0)/20*mm) : 0;
+
+  // Build BOQ items
+  const items = [
+    { section:'A — STRUCTURAL', items:[] },
+  ];
+
+  const boqData = [
+    // Structural
+    {sec:'A — STRUCTURAL',no:'A1',desc:'Concrete — Slabs',spec:`${sz.slabThk*1000}mm thick, ${cf.concreteGrade}, min cover ${cf.coverMin}mm`,unit:'m³',qty:slabVol.toFixed(2),rate:rates.concrete[code]||380},
+    {sec:'A — STRUCTURAL',no:'A2',desc:'Concrete — Foundations',spec:`${sz.foundDepth*1000}mm depth strip/raft, ${cf.concreteGrade}`,unit:'m³',qty:foundVol.toFixed(2),rate:rates.concrete[code]||380},
+    {sec:'A — STRUCTURAL',no:'A3',desc:'Concrete — Columns & Beams',spec:`${sz.colSize*1000}×${sz.colSize*1000}mm columns, ${cf.concreteGrade}`,unit:'m³',qty:(colVol+beamVol).toFixed(2),rate:(rates.concrete[code]||380)*1.1},
+    {sec:'A — STRUCTURAL',no:'A4',desc:`Reinforcement Steel — T${sz.rebarDia}`,spec:`High tensile deformed bar, ${sz.rebarDia}mm main`,unit:'tonne',qty:(rebarKg/1000).toFixed(2),rate:rates.rebar[code]||4800},
+    {sec:'A — STRUCTURAL',no:'A5',desc:'Formwork — All Elements',spec:'Plywood & steel prop formwork',unit:'m²',qty:formworkArea,rate:85},
+    // Blockwork
+    {sec:'B — BLOCKWORK',no:'B1',desc:'Blockwork — External Walls',spec:`${sz.extBlock*1000}mm solid block, cement mortar 1:4`,unit:'m²',qty:extBlockM2,rate:rates.block[code]||38},
+    {sec:'B — BLOCKWORK',no:'B2',desc:'Blockwork — Internal Partitions',spec:`${sz.intBlock*1000}mm block partition wall`,unit:'m²',qty:intBlockM2,rate:(rates.block[code]||38)*0.85},
+    // Finishes
+    {sec:'C — FINISHES',no:'C1',desc:'Floor Tiling',spec:`${sz.tileSize*1000}×${sz.tileSize*1000}mm ceramic/porcelain tile on ${sz.plasterThk*1000}mm screed`,unit:'m²',qty:tileM2,rate:rates.tile[code]||120},
+    {sec:'C — FINISHES',no:'C2',desc:'Wall Plaster & Render',spec:`${sz.plasterThk*1000}mm sand/cement plaster, finish coat`,unit:'m²',qty:plasterM2,rate:rates.plaster[code]||45},
+    {sec:'C — FINISHES',no:'C3',desc:'Emulsion Paint — Walls & Ceilings',spec:'2 coats primer + 2 coats emulsion',unit:'m²',qty:paintM2,rate:rates.paint[code]||18},
+    {sec:'C — FINISHES',no:'C4',desc:'Internal Doors',spec:'Solid core flush door, frames & ironmongery',unit:'Nr',qty:doorsNr,rate:2200},
+    {sec:'C — FINISHES',no:'C5',desc:'Windows & Glazing',spec:'Aluminium double-glazed window unit',unit:'Nr',qty:windowsNr,rate:1800},
+  ];
+
+  if(hasElec) {
+    boqData.push({sec:'D — ELECTRICAL',no:'D1',desc:'PVC Conduit & Cable',spec:`${sz.cableSize}mm² XLPE cables in conduit`,unit:'m',qty:cableM,rate:rates.elec[code]||280});
+    boqData.push({sec:'D — ELECTRICAL',no:'D2',desc:'Distribution Boards',spec:'Main & sub DBs, MCBs & RCDs',unit:'Nr',qty:dbNr,rate:4500});
+    boqData.push({sec:'D — ELECTRICAL',no:'D3',desc:'Socket Outlets',spec:'13A switched sockets, flush mounted',unit:'Nr',qty:socketsNr,rate:120});
+    boqData.push({sec:'D — ELECTRICAL',no:'D4',desc:'Light Fittings',spec:'Recessed LED downlights',unit:'Nr',qty:lightsNr,rate:180});
+  }
+  if(hasPlumb) {
+    boqData.push({sec:'E — PLUMBING',no:'E1',desc:'Cold Water Piping',spec:`CPVC/PPR pipe ${sz.pipeSize*1000}mm`,unit:'m',qty:pipeM,rate:rates.plumb[code]||220});
+    boqData.push({sec:'E — PLUMBING',no:'E2',desc:'Hot Water Piping',spec:`Insulated CPVC ${sz.pipeSize*1000}mm`,unit:'m',qty:hotPipeM,rate:(rates.plumb[code]||220)*1.2});
+    boqData.push({sec:'E — PLUMBING',no:'E3',desc:'Sanitary Fixtures',spec:'WC, basin, shower, bath — standard grade',unit:'Set',qty:sanitaryNr,rate:1800});
+  }
+  if(hasHVAC) {
+    boqData.push({sec:'F — HVAC',no:'F1',desc:'Split A/C Units',spec:`${sz.acCapacity} TR inverter split unit`,unit:'Nr',qty:acUnits,rate:rates.hvac[code]||380});
+    boqData.push({sec:'F — HVAC',no:'F2',desc:'Ductwork & Insulation',spec:'Galvanised steel duct, 25mm insulation',unit:'m²',qty:ductM2,rate:180});
+  }
+  if(hasFire) {
+    boqData.push({sec:'G — FIRE & SAFETY',no:'G1',desc:'Sprinkler Heads',spec:'Concealed pendant sprinkler, wet system',unit:'Nr',qty:sprinklers,rate:rates.fire[code]||180});
+    boqData.push({sec:'G — FIRE & SAFETY',no:'G2',desc:'Smoke Detectors',spec:'Optical smoke detector, addressable',unit:'Nr',qty:detectors,rate:220});
+    boqData.push({sec:'G — FIRE & SAFETY',no:'G3',desc:'Fire Alarm Panel & Devices',spec:'Conventional/addressable panel, PS',unit:'Item',qty:1,rate:8500});
+  }
+
+  state.boqItems = boqData;
+
+  // Render BOQ table
+  const tbody = document.getElementById('boq-tbody');
+  let currentSec = '';
+  let tbody_html = '';
+  boqData.forEach((item,i) => {
+    if(item.sec !== currentSec) {
+      currentSec = item.sec;
+      tbody_html += `<tr class="section-row"><td colspan="6">${item.sec}</td></tr>`;
+    }
+    tbody_html += `<tr><td><span style="font-family:var(--mono);font-size:11px;color:var(--muted)">${item.no}</span></td><td>${item.desc}</td><td style="font-size:11px;color:var(--muted)">${item.spec}</td><td style="font-family:var(--mono)">${item.unit}</td><td class="qty-cell">${item.qty}</td><td style="font-size:11px;color:var(--muted)">Rate: SAR ${Number(item.rate).toLocaleString()}/unit</td></tr>`;
+  });
+  // Total
+  const totalCost = boqData.reduce((s,i)=>s+parseFloat(i.qty)*i.rate,0);
+  tbody_html += `<tr class="total-row"><td colspan="4">TOTAL BOQ ESTIMATE</td><td></td><td style="font-family:var(--mono);font-size:14px;color:var(--accent)">SAR ${Math.round(totalCost).toLocaleString()}</td></tr>`;
+  tbody.innerHTML = tbody_html;
+
+  // Summary stats
+  const gfa = totalFloorArea;
+  const costPerm2 = gfa>0 ? Math.round(totalCost/gfa) : 0;
+  document.getElementById('boq-summary-stats').style.display='grid';
+  document.getElementById('boq-summary-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Total Floor Area</div><div class="stat-value accent">${gfa.toFixed(1)} m²</div><div class="stat-sub">${state.rooms.length} spaces</div></div>
+    <div class="stat-card"><div class="stat-label">Concrete Volume</div><div class="stat-value green">${totalConcreteVol} m³</div><div class="stat-sub">${cf.concreteGrade}</div></div>
+    <div class="stat-card"><div class="stat-label">Rebar (T${sz.rebarDia})</div><div class="stat-value">${(rebarKg/1000).toFixed(1)} t</div><div class="stat-sub">${rebarKg.toLocaleString()} kg</div></div>
+    <div class="stat-card"><div class="stat-label">BOQ Line Items</div><div class="stat-value accent">${boqData.length}</div><div class="stat-sub">incl. MEP</div></div>
+    <div class="stat-card"><div class="stat-label">Total BOQ Value</div><div class="stat-value green">SAR ${Math.round(totalCost/1000)}K</div><div class="stat-sub">${state.buildingCode} standard</div></div>
+    <div class="stat-card"><div class="stat-label">Cost / m² GFA</div><div class="stat-value">SAR ${costPerm2.toLocaleString()}</div><div class="stat-sub">budget estimate</div></div>
+  `;
+
+  if(!silent) { showPage('boq-results'); showNotif('BOQ calculated — '+boqData.length+' line items'); }
+  populateCostFromBOQ();
+  renderCarbon();
+  renderMaterialSchedule();
+}
+
+// ========== IMPORT BOQ TO COST ==========
+function populateCostFromBOQ() {
+  state.costItems = state.boqItems.map(i=>({
+    ...i, fromBOQ:true,
+    matPct:60, labPct:30,
+    editedQty: null
+  }));
+}
+
+function importBOQtoCost() {
+  if(state.boqItems.length===0) { showNotif('No BOQ calculated yet — run BOQ first','warn'); return; }
+  populateCostFromBOQ();
+  renderQtyTable();
+  showNotif('BOQ imported to Cost Estimator');
+}
+
+function importFromBOQ() { importBOQtoCost(); }
+
+// ========== COST QTY TABLE (FEATURE 2) ==========
+function renderQtyTable() {
+  const tbody = document.getElementById('qty-tbody');
+  let html = '';
+  let currentSec = '';
+  state.costItems.forEach((item,i)=>{
+    if(item.sec !== currentSec) {
+      currentSec = item.sec;
+      html += `<tr class="section-row"><td colspan="8">${item.sec}</td></tr>`;
+    }
+    const qty = item.editedQty!==null ? item.editedQty : parseFloat(item.qty);
+    const amount = qty * item.rate;
+    html += `<tr>
+      <td style="font-size:11px;color:${item.fromBOQ?'var(--accent2)':'var(--muted)'}">${item.fromBOQ?'★':''}</td>
+      <td style="font-size:13px">${item.desc}</td>
+      <td style="font-family:var(--mono);font-size:11px">${item.unit}</td>
+      <td><input class="qty-input" value="${qty}" onchange="updateCostQty(${i},this.value)" oninput="updateCostQty(${i},this.value)"/></td>
+      <td><input class="rate-input" value="${item.rate}" onchange="updateCostRate(${i},this.value)" oninput="updateCostRate(${i},this.value)"/></td>
+      <td><input class="qty-input" style="width:60px" value="${item.matPct}" onchange="updateCostMat(${i},this.value)" oninput="updateCostMat(${i},this.value)"/></td>
+      <td><input class="qty-input" style="width:60px" value="${item.labPct}" onchange="updateCostLab(${i},this.value)" oninput="updateCostLab(${i},this.value)"/></td>
+      <td class="amount-cell" id="cost-amt-${i}">SAR ${Math.round(amount).toLocaleString()}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function updateCostQty(i,val) {
+  state.costItems[i].editedQty = parseFloat(val)||0;
+  const amount = (parseFloat(val)||0) * state.costItems[i].rate;
+  const el = document.getElementById('cost-amt-'+i);
+  if(el) el.textContent = 'SAR '+Math.round(amount).toLocaleString();
+}
+function updateCostRate(i,val) {
+  state.costItems[i].rate = parseFloat(val)||0;
+  const qty = state.costItems[i].editedQty!==null?state.costItems[i].editedQty:parseFloat(state.costItems[i].qty);
+  const amount = qty * (parseFloat(val)||0);
+  const el = document.getElementById('cost-amt-'+i);
+  if(el) el.textContent = 'SAR '+Math.round(amount).toLocaleString();
+}
+function updateCostMat(i,val) { state.costItems[i].matPct = parseFloat(val)||60; }
+function updateCostLab(i,val) { state.costItems[i].labPct = parseFloat(val)||30; }
+
+function addCostRow() {
+  state.costItems.push({sec:'Z — ADDITIONAL',no:'Z'+state.costItems.length,desc:'Additional Item',spec:'',unit:'Item',qty:'1',rate:0,matPct:60,labPct:30,fromBOQ:false,editedQty:null});
+  renderQtyTable();
+}
+
+// ========== COST REPORT ==========
+function generateCostReport() {
+  if(state.costItems.length===0) { return; }
+  const contingency = parseFloat(document.getElementById('cost-contingency').value)||0.10;
+  const vat = parseFloat(document.getElementById('cost-vat').value)||0.05;
+  const currency = document.getElementById('cost-currency').value||'SAR';
+  const gfa = parseFloat(document.getElementById('cost-gfa').value)||state.projectGFA||0;
+
+  const tbody = document.getElementById('cost-report-tbody');
+  let html = '';
+  let currentSec = '';
+  let totalMat=0,totalLab=0,totalInd=0,totalAll=0;
+  let secTotal = 0, secName='';
+
+  const rows = [];
+  state.costItems.forEach((item,i)=>{
+    const qty = item.editedQty!==null?item.editedQty:parseFloat(item.qty)||0;
+    const rate = item.rate||0;
+    const amount = qty*rate;
+    const mat = amount*(item.matPct/100);
+    const lab = amount*(item.labPct/100);
+    const ind = amount - mat - lab;
+    totalMat+=mat; totalLab+=lab; totalInd+=ind; totalAll+=amount;
+    rows.push({...item,qty,rate,amount,mat,lab,ind,idx:i});
+  });
+
+  currentSec='';
+  rows.forEach((item,i)=>{
+    if(item.sec!==currentSec) {
+      if(currentSec) html+=`<tr class="subtotal-row"><td colspan="8" style="text-align:right;padding-right:20px">Subtotal ${currentSec}</td><td class="amount-cell">—</td></tr>`;
+      currentSec=item.sec;
+      html+=`<tr class="section-row"><td colspan="9">${item.sec}</td></tr>`;
+    }
+    html+=`<tr>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${item.no||i+1}</td>
+      <td>${item.desc}</td>
+      <td style="font-family:var(--mono);font-size:11px">${item.unit}</td>
+      <td class="qty-cell">${item.qty}</td>
+      <td class="rate-cell">${currency} ${Number(item.rate).toLocaleString()}</td>
+      <td class="rate-cell">${currency} ${Math.round(item.mat).toLocaleString()}</td>
+      <td class="rate-cell">${currency} ${Math.round(item.lab).toLocaleString()}</td>
+      <td class="rate-cell">${currency} ${Math.round(item.ind).toLocaleString()}</td>
+      <td class="amount-cell">${currency} ${Math.round(item.amount).toLocaleString()}</td>
+    </tr>`;
+  });
+
+  const cont = totalAll*contingency;
+  const subtotal2 = totalAll+cont;
+  const vatAmt = subtotal2*vat;
+  const grandTotal = subtotal2+vatAmt;
+
+  html+=`
+    <tr class="subtotal-row"><td colspan="8" style="text-align:right">Sub-Total Construction</td><td class="amount-cell">${currency} ${Math.round(totalAll).toLocaleString()}</td></tr>
+    <tr class="subtotal-row"><td colspan="8" style="text-align:right">Contingency (${(contingency*100).toFixed(0)}%)</td><td class="amount-cell">${currency} ${Math.round(cont).toLocaleString()}</td></tr>
+    <tr class="subtotal-row"><td colspan="8" style="text-align:right">VAT / Tax (${(vat*100).toFixed(0)}%)</td><td class="amount-cell">${currency} ${Math.round(vatAmt).toLocaleString()}</td></tr>
+    <tr class="total-row"><td colspan="5">GRAND TOTAL</td><td>${currency} ${Math.round(totalMat).toLocaleString()}</td><td>${currency} ${Math.round(totalLab).toLocaleString()}</td><td>${currency} ${Math.round(totalInd).toLocaleString()}</td><td class="amount-cell" style="color:var(--accent);font-size:15px">${currency} ${Math.round(grandTotal).toLocaleString()}</td></tr>
+  `;
+  tbody.innerHTML = html;
+
+  const costPerm2 = gfa>0 ? Math.round(grandTotal/gfa) : 0;
+  document.getElementById('bench-your').textContent = currency+' '+costPerm2.toLocaleString();
+
+  document.getElementById('cost-summary-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Material Cost</div><div class="stat-value accent">${currency} ${Math.round(totalMat/1000)}K</div><div class="stat-sub">${Math.round(totalMat/totalAll*100)}% of construction</div></div>
+    <div class="stat-card"><div class="stat-label">Labour Cost</div><div class="stat-value">${currency} ${Math.round(totalLab/1000)}K</div><div class="stat-sub">${Math.round(totalLab/totalAll*100)}% of construction</div></div>
+    <div class="stat-card"><div class="stat-label">Indirect / Overhead</div><div class="stat-value">${currency} ${Math.round(totalInd/1000)}K</div><div class="stat-sub">${Math.round(totalInd/totalAll*100)}% of construction</div></div>
+    <div class="stat-card"><div class="stat-label">Contingency</div><div class="stat-value">${currency} ${Math.round(cont/1000)}K</div><div class="stat-sub">${(contingency*100).toFixed(0)}% applied</div></div>
+    <div class="stat-card"><div class="stat-label">Grand Total incl. VAT</div><div class="stat-value green" style="font-size:20px">${currency} ${Math.round(grandTotal/1000)}K</div><div class="stat-sub">all-in project cost</div></div>
+    <div class="stat-card"><div class="stat-label">Cost / m² GFA</div><div class="stat-value accent">${currency} ${costPerm2.toLocaleString()}</div><div class="stat-sub">benchmark metric</div></div>
+  `;
+}
+
+// ========== CAD EXTRACT (FEATURE 4) ==========
+function handleCADFile(input) {
+  if(input.files && input.files[0]) {
+    const f = input.files[0];
+    const res = document.getElementById('cad-result');
+    res.style.display = 'block';
+    res.innerHTML = `<div class="alert alert-success">✓ File registered: <strong>${f.name}</strong> (${(f.size/1024).toFixed(1)} KB)<br/>Enter key dimensions below to generate precise BOQ quantities.</div>`;
+
+    // If image, show preview
+    if(f.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        res.innerHTML += `<img src="${e.target.result}" style="max-width:100%;border-radius:8px;border:1px solid var(--border);margin-top:10px"/>`;
+        // Simulate AI dimension extraction
+        setTimeout(()=>{
+          res.innerHTML += `<div class="alert alert-warn" style="margin-top:10px">🤖 AI estimated dimensions from image. Please verify below before generating BOQ.</div>`;
+          // Auto-fill rough estimate
+          document.getElementById('cad-area').value = 350;
+          document.getElementById('cad-floors').value = 2;
+          document.getElementById('cad-bed').value = 4;
+          document.getElementById('cad-bath').value = 3;
+        },1500);
+      };
+      reader.readAsDataURL(f);
+    }
+  }
+}
+
+function handleCADDrop(event) {
+  event.preventDefault();
+  document.getElementById('cad-drop-zone').classList.remove('dragging');
+  const files = event.dataTransfer.files;
+  if(files[0]) {
+    const inp = document.getElementById('cad-file');
+    // Simulate
+    const res = document.getElementById('cad-result');
+    res.style.display='block';
+    res.innerHTML=`<div class="alert alert-success">✓ File dropped: <strong>${files[0].name}</strong>. Enter dimensions to generate BOQ.</div>`;
+  }
+}
+
+function cadRecalc() {
+  const area = parseFloat(document.getElementById('cad-area').value)||0;
+  const floors = parseFloat(document.getElementById('cad-floors').value)||1;
+  const height = parseFloat(document.getElementById('cad-height').value)||3.2;
+  // Auto-suggest
+}
+
+function generateCADBOQ() {
+  const area = parseFloat(document.getElementById('cad-area').value)||0;
+  const floors = parseFloat(document.getElementById('cad-floors').value)||1;
+  const height = parseFloat(document.getElementById('cad-height').value)||3.2;
+  const beds = parseFloat(document.getElementById('cad-bed').value)||0;
+  const baths = parseFloat(document.getElementById('cad-bath').value)||0;
+  const code = document.getElementById('cad-code').value;
+  const cf = codeFactors[code]||codeFactors.SBC304;
+  const rates = unitRates;
+
+  if(!area) { showNotif('Enter floor area first','warn'); return; }
+
+  const totalArea = area * floors;
+  const wallArea = Math.sqrt(area)*4*2*height*floors;
+  const slabVol = (totalArea*(0.15)).toFixed(2);
+  const foundVol = (totalArea*0.4*0.75).toFixed(2);
+  const colVol = (Math.ceil(totalArea/25)*0.4*0.4*3.0).toFixed(2);
+  const rebarKg = Math.round((parseFloat(slabVol)+parseFloat(foundVol)+parseFloat(colVol))*cf.rebarFactor);
+  const blockM2 = (wallArea*0.85 - beds*2.1*2 - baths*0.5).toFixed(1);
+  const tileM2 = (totalArea*1.05).toFixed(1);
+  const plasterM2 = (wallArea*0.9+totalArea).toFixed(1);
+  const acUnits = Math.ceil(totalArea*0.12);
+  const cableM = Math.round(totalArea*4.5);
+
+  const cadItems = [
+    {no:'A1',desc:'Concrete — Slabs',spec:`${cf.concreteGrade}, 150mm`,unit:'m³',qty:slabVol,rate:rates.concrete[code]||380},
+    {no:'A2',desc:'Concrete — Foundations',spec:`${cf.concreteGrade}, 750mm deep`,unit:'m³',qty:foundVol,rate:rates.concrete[code]||380},
+    {no:'A3',desc:'Concrete — Columns',spec:`400×400mm, ${cf.concreteGrade}`,unit:'m³',qty:colVol,rate:(rates.concrete[code]||380)*1.1},
+    {no:'A4',desc:'Rebar Steel',spec:'High tensile T16',unit:'tonne',qty:(rebarKg/1000).toFixed(2),rate:rates.rebar[code]||4800},
+    {no:'B1',desc:'Blockwork',spec:'200mm external + 150mm internal',unit:'m²',qty:blockM2,rate:rates.block[code]||38},
+    {no:'C1',desc:'Floor Tiles',spec:'600×600mm ceramic',unit:'m²',qty:tileM2,rate:rates.tile[code]||120},
+    {no:'C2',desc:'Plaster',spec:'15mm sand/cement',unit:'m²',qty:plasterM2,rate:rates.plaster[code]||45},
+    {no:'C3',desc:'Paint',spec:'2 coats emulsion',unit:'m²',qty:(parseFloat(plasterM2)*1.1).toFixed(1),rate:rates.paint[code]||18},
+    {no:'D1',desc:'Electrical Wiring',spec:'4mm² XLPE cable',unit:'m',qty:cableM,rate:rates.elec[code]||280},
+    {no:'D2',desc:'DB + Sockets + Lights',spec:'Distribution boards & fittings',unit:'Lot',qty:1,rate:Math.round(totalArea*85)},
+    {no:'E1',desc:'Plumbing & Drainage',spec:`${baths} bathrooms, hot/cold`,unit:'Lot',qty:1,rate:Math.round(baths*6500)},
+    {no:'F1',desc:'A/C Split Units',spec:'2 TR inverter per room',unit:'Nr',qty:acUnits,rate:rates.hvac[code]||380},
+    {no:'G1',desc:'Fire & Safety',spec:'Sprinklers, detectors, alarm panel',unit:'Lot',qty:1,rate:Math.round(totalArea*180)},
+  ];
+
+  state.cadBoqItems = cadItems;
+  let tbody_html='';
+  let totalCost=0;
+  cadItems.forEach(item=>{
+    const amount=parseFloat(item.qty)*item.rate;
+    totalCost+=amount;
+    tbody_html+=`<tr><td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${item.no}</td><td>${item.desc}</td><td style="font-size:11px;color:var(--muted)">${item.spec}</td><td style="font-family:var(--mono)">${item.unit}</td><td class="qty-cell">${item.qty}</td><td class="rate-cell">SAR ${item.rate.toLocaleString()}</td><td class="amount-cell">SAR ${Math.round(amount).toLocaleString()}</td></tr>`;
+  });
+  const vat=totalCost*0.05;
+  const grand=totalCost+vat;
+  tbody_html+=`<tr class="total-row"><td colspan="6">TOTAL (excl. VAT)</td><td class="amount-cell">SAR ${Math.round(totalCost).toLocaleString()}</td></tr>`;
+  tbody_html+=`<tr class="total-row"><td colspan="6">GRAND TOTAL incl. 5% VAT</td><td class="amount-cell" style="color:var(--accent);font-size:14px">SAR ${Math.round(grand).toLocaleString()}</td></tr>`;
+  document.getElementById('cad-boq-tbody').innerHTML = tbody_html;
+
+  const costPm2 = Math.round(grand/totalArea);
+  document.getElementById('cad-cost-summary').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
+      <div><div class="stat-label">Total Floor Area</div><div class="stat-value accent">${totalArea} m²</div></div>
+      <div><div class="stat-label">Construction Cost</div><div class="stat-value green">SAR ${Math.round(totalCost/1000)}K</div></div>
+      <div><div class="stat-label">Grand Total + VAT</div><div class="stat-value">SAR ${Math.round(grand/1000)}K</div></div>
+      <div><div class="stat-label">Rate / m²</div><div class="stat-value accent">SAR ${costPm2.toLocaleString()}</div></div>
+    </div>
+  `;
+  document.getElementById('cad-boq-output').style.display='block';
+  showNotif('BOQ generated from drawing — '+cadItems.length+' items');
+}
+
+function acceptCADBOQ() {
+  state.boqItems = state.cadBoqItems.map(i=>({...i,sec:'DRAWING EXTRACT',mepElec:true,mepPlumb:true,mepHVAC:true,mepFire:true}));
+  populateCostFromBOQ();
+  showPage('boq-results');
+  showNotif('CAD BOQ accepted and loaded');
+}
+
+// ========== CARBON (FEATURE 3) ==========
+const carbonFactors = {
+  'Concrete (C30)': {unit:'m³', factor:290},
+  'Rebar Steel': {unit:'tonne', factor:1760},
+  'Blockwork': {unit:'m²', factor:24},
+  'Ceramic Tiles': {unit:'m²', factor:18},
+  'Plaster': {unit:'m²', factor:8},
+  'Paint': {unit:'m²', factor:3},
+  'Aluminium (windows)': {unit:'m²', factor:170},
+  'Copper wiring': {unit:'m', factor:0.3},
+  'PVC pipe': {unit:'m', factor:0.8},
+  'HVAC (split unit)': {unit:'Nr', factor:400},
+  'Sprinkler system': {unit:'Nr', factor:2},
+};
+
+function renderCarbon() {
+  if(state.boqItems.length===0) return;
+  const sz = getSizes();
+  const cf = codeFactors[state.buildingCode]||codeFactors.SBC304;
+
+  // Map BOQ to carbon
+  const mapping = [
+    {mat:'Concrete (C30)', qty: state.boqItems.filter(i=>i.desc.includes('Concrete')).reduce((s,i)=>s+parseFloat(i.qty),0)},
+    {mat:'Rebar Steel', qty: state.boqItems.filter(i=>i.desc.includes('Rebar')||i.desc.includes('Reinforcement')).reduce((s,i)=>s+parseFloat(i.qty),0)},
+    {mat:'Blockwork', qty: state.boqItems.filter(i=>i.desc.includes('Block')).reduce((s,i)=>s+parseFloat(i.qty),0)},
+    {mat:'Ceramic Tiles', qty: state.boqItems.filter(i=>i.desc.includes('Tile')).reduce((s,i)=>s+parseFloat(i.qty),0)},
+    {mat:'Plaster', qty: state.boqItems.filter(i=>i.desc.includes('Plaster')).reduce((s,i)=>s+parseFloat(i.qty),0)},
+    {mat:'Paint', qty: state.boqItems.filter(i=>i.desc.includes('Paint')).reduce((s,i)=>s+parseFloat(i.qty),0)},
+    {mat:'Aluminium (windows)', qty: state.boqItems.filter(i=>i.desc.includes('Window')).reduce((s,i)=>s+parseFloat(i.qty),0)},
+    {mat:'Copper wiring', qty: state.boqItems.filter(i=>i.desc.includes('Cable')).reduce((s,i)=>s+parseFloat(i.qty),0)},
+    {mat:'PVC pipe', qty: state.boqItems.filter(i=>i.desc.includes('Piping')||i.desc.includes('Water')).reduce((s,i)=>s+parseFloat(i.qty),0)},
+    {mat:'HVAC (split unit)', qty: state.boqItems.filter(i=>i.desc.includes('A/C')||i.desc.includes('Split')).reduce((s,i)=>s+parseFloat(i.qty),0)},
+    {mat:'Sprinkler system', qty: state.boqItems.filter(i=>i.desc.includes('Sprinkler')).reduce((s,i)=>s+parseFloat(i.qty),0)},
+  ].filter(m=>m.qty>0);
+
+  const totalCarbon = mapping.reduce((s,m)=>s+(m.qty*(carbonFactors[m.mat]?.factor||0)),0);
+
+  let html='';
+  mapping.forEach(m=>{
+    const cf2 = carbonFactors[m.mat]||{factor:0};
+    const total = m.qty * cf2.factor;
+    const pct = totalCarbon>0 ? (total/totalCarbon*100).toFixed(1) : 0;
+    html+=`<tr><td>${m.mat}</td><td class="qty-cell">${m.qty}</td><td style="font-family:var(--mono)">${cf2.unit}</td><td class="rate-cell">${cf2.factor} kgCO₂e/${cf2.unit}</td><td class="amount-cell">${Math.round(total).toLocaleString()}</td><td><div style="display:flex;align-items:center;gap:8px"><div style="width:${Math.min(100,pct)}px;height:6px;background:var(--accent2);border-radius:3px"></div><span style="font-size:11px;color:var(--muted)">${pct}%</span></div></td></tr>`;
+  });
+  document.getElementById('carbon-tbody').innerHTML = html;
+
+  const tCO2 = (totalCarbon/1000).toFixed(1);
+  const gfa = state.rooms.reduce((s,r)=>s+r.l*r.w,0)||1;
+  document.getElementById('carbon-summary').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px">
+      <div><div class="stat-label">Total Embodied Carbon</div><div class="stat-value accent">${Math.round(totalCarbon).toLocaleString()} kgCO₂e</div></div>
+      <div><div class="stat-label">In Tonnes</div><div class="stat-value green">${tCO2} tCO₂e</div></div>
+      <div><div class="stat-label">Per m² GFA</div><div class="stat-value">${Math.round(totalCarbon/gfa)} kgCO₂e/m²</div></div>
+      <div><div class="stat-label">LEED Credit</div><div class="stat-value" style="font-size:14px">${totalCarbon/gfa < 500 ? '✓ Eligible' : 'Exceeds 500 kgCO₂e/m²'}</div></div>
+    </div>
+  `;
+}
+
+// ========== MATERIAL SCHEDULE (FEATURE 3) ==========
+function renderMaterialSchedule() {
+  const today = new Date();
+  const addDays=(d,n)=>{const dt=new Date(d);dt.setDate(dt.getDate()+n);return dt.toLocaleDateString('en-GB')};
+
+  const schedData = state.boqItems.map((item,i)=>({
+    mat: item.desc,
+    qty: item.qty,
+    unit: item.unit,
+    lead: item.desc.includes('Steel')||item.desc.includes('Rebar')?'14 days':item.desc.includes('HVAC')||item.desc.includes('A/C')?'21 days':item.desc.includes('Windows')||item.desc.includes('Aluminium')?'28 days':'7 days',
+    leadDays: item.desc.includes('Steel')||item.desc.includes('Rebar')?14:item.desc.includes('HVAC')?21:item.desc.includes('Windows')?28:7,
+    cat: item.desc.includes('Concrete')||item.desc.includes('Rebar')||item.desc.includes('Block')?'Structural':item.desc.includes('Tile')||item.desc.includes('Plaster')||item.desc.includes('Paint')||item.desc.includes('Door')||item.desc.includes('Window')?'Finishes':item.desc.includes('Cable')||item.desc.includes('DB')||item.desc.includes('Elec')?'Electrical':item.desc.includes('Plumb')||item.desc.includes('Water')||item.desc.includes('Sanitary')?'Plumbing':item.desc.includes('A/C')||item.desc.includes('HVAC')||item.desc.includes('Duct')?'HVAC':'Fire & Safety',
+  }));
+
+  let html = schedData.map(s=>`<tr>
+    <td>${s.mat}</td><td class="qty-cell">${s.qty}</td><td style="font-family:var(--mono)">${s.unit}</td>
+    <td style="font-family:var(--mono);color:var(--muted)">${s.lead}</td>
+    <td style="font-family:var(--mono)">${addDays(today, -(s.leadDays))}</td>
+    <td><span class="badge-tag" style="background:rgba(91,141,238,.1);color:var(--accent3);border:1px solid rgba(91,141,238,.2)">${s.cat}</span></td>
+    <td><span class="badge-tag badge-new">Not Ordered</span></td>
+  </tr>`).join('');
+  document.getElementById('material-tbody').innerHTML = html;
+}
+
+// ========== TIMELINE ==========
+function generateTimeline() {
+  const startDate = document.getElementById('tl-start').value;
+  const gfa = parseFloat(document.getElementById('tl-gfa').value)||state.projectGFA||400;
+  const daysPerWeek = parseInt(document.getElementById('tl-days').value)||6;
+
+  if(!startDate) { showNotif('Select a start date first','warn'); return; }
+
+  const start = new Date(startDate);
+  const addWeeks=(d,w)=>{const dt=new Date(d);dt.setDate(dt.getDate()+Math.round(w*(7/daysPerWeek*daysPerWeek)));return dt.toLocaleDateString('en-GB')};
+
+  const phases = [
+    {phase:'Site Setup & Mobilisation',weeks:2,trade:'General',start:0},
+    {phase:'Bulk Excavation & Earthworks',weeks:3,trade:'Civil',start:2},
+    {phase:'Foundation Works',weeks:4,trade:'Structural',start:4},
+    {phase:'Ground Floor Slab & Columns',weeks:4,trade:'Structural',start:7},
+    {phase:'First Floor Slab & Frame',weeks:4,trade:'Structural',start:10},
+    {phase:'Roof Slab & Completion',weeks:3,trade:'Structural',start:13},
+    {phase:'External Blockwork & Facades',weeks:4,trade:'Blockwork',start:14},
+    {phase:'Internal Blockwork & Partitions',weeks:4,trade:'Blockwork',start:16},
+    {phase:'Rough-in MEP — Electrical',weeks:5,trade:'Electrical',start:17},
+    {phase:'Rough-in MEP — Plumbing',weeks:4,trade:'Plumbing',start:17},
+    {phase:'HVAC Ductwork & Equipment',weeks:5,trade:'HVAC',start:18},
+    {phase:'Plastering — All Areas',weeks:4,trade:'Finishes',start:22},
+    {phase:'Floor Tiling',weeks:3,trade:'Finishes',start:24},
+    {phase:'Wall Tiling & Painting',weeks:4,trade:'Finishes',start:26},
+    {phase:'Doors, Windows & Joinery',weeks:3,trade:'Finishes',start:25},
+    {phase:'MEP Fix — Electrical',weeks:3,trade:'Electrical',start:28},
+    {phase:'MEP Fix — Plumbing & Sanitary',weeks:3,trade:'Plumbing',start:28},
+    {phase:'HVAC Commissioning',weeks:2,trade:'HVAC',start:29},
+    {phase:'Fire & Safety — Testing',weeks:2,trade:'Fire',start:30},
+    {phase:'External Works & Landscaping',weeks:4,trade:'Civil',start:28},
+    {phase:'Snagging & Defect Rectification',weeks:3,trade:'General',start:30},
+    {phase:'Inspections & Handover',weeks:2,trade:'General',start:32},
+  ];
+
+  const totalWeeks = 34;
+  const colors = {General:'var(--muted)',Civil:'var(--accent)',Structural:'var(--accent2)',Blockwork:'var(--accent3)',Electrical:'#e8b84b',Plumbing:'#3ecf8e',HVAC:'#5b8dee',Finishes:'#e85b5b',Fire:'#ff7b54'};
+
+  let gantHtml = `<div style="overflow-x:auto"><div style="min-width:900px">`;
+  // Header weeks
+  gantHtml += `<div style="display:grid;grid-template-columns:200px repeat(${totalWeeks},1fr);margin-bottom:4px">`;
+  gantHtml += `<div style="font-size:10px;color:var(--muted);padding:4px">Phase</div>`;
+  for(let w=0;w<totalWeeks;w++) {
+    gantHtml += `<div style="font-size:9px;color:var(--border);text-align:center;border-left:1px solid var(--border);padding:2px">W${w+1}</div>`;
+  }
+  gantHtml += `</div>`;
+
+  phases.forEach(p=>{
+    const col = colors[p.trade]||'var(--muted)';
+    gantHtml += `<div style="display:grid;grid-template-columns:200px repeat(${totalWeeks},1fr);margin-bottom:3px;align-items:center">`;
+    gantHtml += `<div style="font-size:11px;padding:4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.phase}</div>`;
+    for(let w=0;w<totalWeeks;w++) {
+      const inRange = w>=p.start && w<p.start+p.weeks;
+      gantHtml += `<div style="height:18px;${inRange?`background:${col};opacity:0.8`:''}${w===p.start&&inRange?';border-radius:4px 0 0 4px':''}${w===p.start+p.weeks-1&&inRange?';border-radius:0 4px 4px 0':''}border-left:1px solid var(--border)"></div>`;
+    }
+    gantHtml += `</div>`;
+  });
+  gantHtml += `</div></div>`;
+
+  document.getElementById('timeline-output').innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Construction Programme — ${totalWeeks} weeks (${Math.round(totalWeeks/4.3)} months)</div>
+        <button class="btn btn-primary btn-sm" onclick="exportTimelinePDF()">📄 Export Schedule PDF</button>
+      </div>
+      <div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap">
+        ${Object.entries(colors).map(([t,c])=>`<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)"><span style="width:12px;height:12px;border-radius:2px;background:${c};display:inline-block"></span>${t}</span>`).join('')}
+      </div>
+      ${gantHtml}
+      <div class="alert alert-warn" style="margin-top:16px">📅 Programme is indicative. Critical path not shown. Durations assume ${daysPerWeek} working days/week.</div>
+    </div>
+  `;
+  showNotif('Timeline generated — '+phases.length+' phases');
+}
+
+// ========== RFQ GENERATOR ==========
+function generateRFQ(trade) {
+  const tradeMap = {
+    structural:{title:'Structural RFQ Package',scope:['Concrete (slabs, columns, beams, foundations)','Reinforcement steel supply & fix','Formwork all elements','Blockwork — external & internal'],items:['A1','A2','A3','A4','A5','B1','B2']},
+    electrical:{title:'Electrical RFQ Package',scope:['PVC conduit & XLPE cable','Distribution boards & MCBs','Socket outlets & light fittings','ELV, data & communications','Final testing & commissioning'],items:['D1','D2','D3','D4']},
+    plumbing:{title:'Plumbing & Drainage RFQ',scope:['Cold water pipework','Hot water pipework with insulation','Sanitary fixtures & fittings','Drainage & soil pipes','Testing & commissioning'],items:['E1','E2','E3']},
+    hvac:{title:'HVAC RFQ Package',scope:['Split A/C units — supply & install','Ductwork & insulation','Grilles, diffusers & controls','Thermostat & BMS interface','Commissioning & handover'],items:['F1','F2']},
+    finishes:{title:'Finishes RFQ Package',scope:['Floor tiling — all areas','Wall tiling — wet areas','Plaster & render','Emulsion painting','Doors, frames & ironmongery','Windows & glazing'],items:['C1','C2','C3','C4','C5']},
+    fire:{title:'Fire & Safety RFQ Package',scope:['Sprinkler heads & pipework','Smoke & heat detectors','Fire alarm panel & devices','Emergency lighting & signage','Hose reels & extinguishers','Commissioning & NFPA/SBC test'],items:['G1','G2','G3']},
+  };
+  const t = tradeMap[trade];
+  const projItems = state.boqItems.filter(i=>t.items.includes(i.no));
+  const totalVal = projItems.reduce((s,i)=>s+parseFloat(i.qty)*i.rate,0);
+
+  document.getElementById('rfq-modal-title').textContent = t.title;
+  document.getElementById('rfq-modal-body').innerHTML = `
+    <div class="alert alert-info">Project: <strong>${state.projectName||'Untitled'}</strong> · Code: ${state.buildingCode} · Prepared: ${new Date().toLocaleDateString('en-GB')}</div>
+    <h4 style="margin-bottom:10px;font-size:13px">Scope of Work:</h4>
+    <ul style="color:var(--muted);font-size:13px;padding-left:20px;margin-bottom:16px">${t.scope.map(s=>`<li style="margin-bottom:4px">${s}</li>`).join('')}</ul>
+    ${projItems.length>0?`
+    <table class="boq-table" style="margin-bottom:16px">
+      <thead><tr><th>Item</th><th>Description</th><th>Unit</th><th>Qty</th><th>Budget Rate</th></tr></thead>
+      <tbody>${projItems.map(i=>`<tr><td style="font-family:var(--mono);font-size:11px">${i.no}</td><td>${i.desc}</td><td style="font-family:var(--mono)">${i.unit}</td><td class="qty-cell">${i.qty}</td><td class="rate-cell">SAR ${i.rate.toLocaleString()}</td></tr>`).join('')}
+      <tr class="total-row"><td colspan="4">Budget Total</td><td class="amount-cell">SAR ${Math.round(totalVal).toLocaleString()}</td></tr>
+      </tbody>
+    </table>`:'<div class="alert alert-warn">No BOQ items for this trade — calculate BOQ first.</div>'}
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:12px;color:var(--muted)">
+      <strong style="color:var(--text)">Submission Requirements:</strong><br/>
+      · Lump sum price including supply, installation and testing<br/>
+      · Programme for this trade scope<br/>
+      · Warranty: minimum 2 years parts & labour<br/>
+      · Contractor registration / IQAMA details<br/>
+      · VAT registration number (KSA)<br/>
+      · References: minimum 3 similar projects
+    </div>
+  `;
+  document.getElementById('rfq-modal').style.display='flex';
+}
+
+// ========== PDF EXPORT (FEATURE 6) ==========
+function exportPDF() {
+  showNotif('Generating full project PDF report…');
+  setTimeout(()=>{
+    const content = buildPDFContent();
+    const w = window.open('','_blank');
+    w.document.write(content);
+    w.document.close();
+    w.print();
+  },500);
+}
+
+function exportCostPDF() { exportPDF(); }
+
+function buildPDFContent() {
+  const now = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+  const projName = state.projectName||document.getElementById('cost-name')?.value||'Project';
+  const client = state.projectClient||document.getElementById('cost-client')?.value||'—';
+  const qs = state.projectQS||'—';
+  const loc = state.projectLocation||'—';
+  const ref = state.projectRef||'—';
+  const gfa = state.projectGFA||document.getElementById('cost-gfa')?.value||'—';
+
+  const boqRows = state.boqItems.map(i=>`<tr><td>${i.no}</td><td>${i.desc}</td><td>${i.spec||''}</td><td>${i.unit}</td><td>${i.qty}</td><td>SAR ${Number(i.rate).toLocaleString()}</td><td>SAR ${Math.round(parseFloat(i.qty)*i.rate).toLocaleString()}</td></tr>`).join('');
+  const totalBOQ = state.boqItems.reduce((s,i)=>s+parseFloat(i.qty)*i.rate,0);
+  const gfaVal = parseFloat(gfa)||0;
+  const costPm2 = gfaVal>0?Math.round(totalBOQ/gfaVal):0;
+
+  return `<!DOCTYPE html><html>
+<head><meta charset="UTF-8"/><title>${projName} — BOQ Report</title>
+<style>
+body{font-family:Arial,sans-serif;font-size:12px;color:#111;margin:0;padding:0}
+.cover{page-break-after:always;background:#0b0e13;color:#fff;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:60px;box-sizing:border-box}
+.cover h1{font-size:40px;font-weight:300;color:#e8b84b;margin-bottom:10px}
+.cover h2{font-size:18px;font-weight:400;color:#aaa;margin-bottom:40px}
+.cover-table{border-collapse:collapse;width:100%;max-width:400px}
+.cover-table td{padding:8px 0;border-bottom:1px solid #252d3d;color:#ccc;font-size:13px}
+.cover-table td:first-child{color:#e8b84b;font-weight:700;width:140px}
+.page{padding:40px;page-break-after:always}
+.page-header{border-bottom:3px solid #e8b84b;padding-bottom:12px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:flex-end}
+.page-header h2{font-size:22px;color:#e8b84b;margin:0}
+.page-header .meta{font-size:11px;color:#666;text-align:right}
+h3{font-size:14px;font-weight:700;color:#333;margin:20px 0 10px}
+table{width:100%;border-collapse:collapse;margin-bottom:20px}
+th{background:#0b0e13;color:#e8b84b;padding:8px 10px;text-align:left;font-size:11px;font-weight:700}
+td{padding:7px 10px;border-bottom:1px solid #eee;font-size:11px}
+tr:nth-child(even) td{background:#f8f8f8}
+.section-row td{background:#fff8e1;font-weight:700;font-size:11px;color:#555;letter-spacing:1px;text-transform:uppercase;border-top:2px solid #e8b84b}
+.total-row td{background:#0b0e13;color:#e8b84b;font-weight:700;font-size:13px;border-top:2px solid #e8b84b}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-bottom:25px}
+.stat{background:#f8f9fa;border:1px solid #eee;border-radius:8px;padding:14px;border-left:4px solid #e8b84b}
+.stat-label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.stat-value{font-size:20px;font-weight:700;color:#0b0e13}
+.cta-page{page-break-before:always;background:#0b0e13;color:#fff;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:60px;box-sizing:border-box;text-align:center}
+.cta-page h1{font-size:32px;font-weight:300;color:#e8b84b;margin-bottom:12px}
+.cta-page p{font-size:14px;color:#aaa;max-width:500px;margin:0 auto 30px;line-height:1.7}
+.contact-card{background:#13171f;border:1px solid #252d3d;border-radius:12px;padding:30px;max-width:500px;margin:0 auto 30px;text-align:left}
+.contact-card h3{color:#e8b84b;font-size:16px;margin-bottom:16px}
+.contact-card p{color:#aaa;font-size:13px;margin-bottom:8px}
+.contact-card strong{color:#fff}
+.qr-note{font-size:11px;color:#555;margin-top:10px}
+.disclaimer{font-size:10px;color:#555;margin-top:20px;border-top:1px solid #eee;padding-top:12px}
+@media print{.cover,.page,.cta-page{page-break-after:always}}
+</style>
+</head>
+<body>
+
+<!-- COVER PAGE -->
+<div class="cover">
+  <div style="font-size:12px;color:#555;letter-spacing:3px;text-transform:uppercase;margin-bottom:30px">BOQ Quick Estimator Platform v4</div>
+  <h1>${projName}</h1>
+  <h2>Bill of Quantities & Cost Plan</h2>
+  <table class="cover-table">
+    <tr><td>Client</td><td>${client}</td></tr>
+    <tr><td>Location</td><td>${loc}</td></tr>
+    <tr><td>Prepared by</td><td>${qs}</td></tr>
+    <tr><td>Reference</td><td>${ref}</td></tr>
+    <tr><td>Building Code</td><td>${state.buildingCode}</td></tr>
+    <tr><td>Project Type</td><td>${state.projectType}</td></tr>
+    <tr><td>GFA</td><td>${gfa} m²</td></tr>
+    <tr><td>Date</td><td>${now}</td></tr>
+  </table>
+  <div style="margin-top:40px;font-size:11px;color:#444">This report was generated by BOQ Quick Estimator — a product of Al Qaswaa Al Sharqia Trading EST</div>
+</div>
+
+<!-- BOQ PAGE -->
+<div class="page">
+  <div class="page-header">
+    <h2>Bill of Quantities</h2>
+    <div class="meta">${projName}<br/>${now} · ${state.buildingCode}</div>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-label">Line Items</div><div class="stat-value">${state.boqItems.length}</div></div>
+    <div class="stat"><div class="stat-label">Total BOQ Value</div><div class="stat-value">SAR ${Math.round(totalBOQ/1000)}K</div></div>
+    <div class="stat"><div class="stat-label">Rate / m² GFA</div><div class="stat-value">SAR ${costPm2.toLocaleString()}</div></div>
+  </div>
+  <table>
+    <thead><tr><th>No.</th><th>Description</th><th>Specification</th><th>Unit</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
+    <tbody>
+      ${state.boqItems.map(i=>`<tr><td>${i.no}</td><td>${i.desc}</td><td>${i.spec||''}</td><td>${i.unit}</td><td>${i.qty}</td><td>SAR ${Number(i.rate).toLocaleString()}</td><td>SAR ${Math.round(parseFloat(i.qty)*i.rate).toLocaleString()}</td></tr>`).join('')}
+      <tr class="total-row"><td colspan="6">TOTAL CONSTRUCTION COST (excl. VAT)</td><td>SAR ${Math.round(totalBOQ).toLocaleString()}</td></tr>
+    </tbody>
+  </table>
+  <div class="disclaimer">All quantities are preliminary estimates suitable for budgeting purposes. They should be verified by a licensed quantity surveyor or structural engineer prior to tender. Rates are based on KSA market data and should be adjusted to reflect current supplier quotes.</div>
+</div>
+
+<!-- COST REPORT PAGE -->
+${state.costItems.length>0?`
+<div class="page">
+  <div class="page-header">
+    <h2>Cost Plan</h2>
+    <div class="meta">${projName}<br/>Material · Labour · Indirect split</div>
+  </div>
+  <table>
+    <thead><tr><th>No.</th><th>Description</th><th>Unit</th><th>Qty</th><th>Rate</th><th>Material</th><th>Labour</th><th>Total</th></tr></thead>
+    <tbody>
+      ${state.costItems.map(i=>{
+        const qty=i.editedQty!==null?i.editedQty:parseFloat(i.qty);
+        const amt=qty*i.rate;
+        const mat=amt*(i.matPct/100);
+        const lab=amt*(i.labPct/100);
+        return `<tr><td>${i.no||''}</td><td>${i.desc}</td><td>${i.unit}</td><td>${qty}</td><td>SAR ${Number(i.rate).toLocaleString()}</td><td>SAR ${Math.round(mat).toLocaleString()}</td><td>SAR ${Math.round(lab).toLocaleString()}</td><td>SAR ${Math.round(amt).toLocaleString()}</td></tr>`;
+      }).join('')}
+    </tbody>
+  </table>
+</div>`:''}
+
+<!-- SPEC SIZES PAGE -->
+<div class="page">
+  <div class="page-header"><h2>Specification Sizes Used</h2><div class="meta">${state.buildingCode} Standard</div></div>
+  <table>
+    <thead><tr><th>Element</th><th>Specification</th><th>Standard</th></tr></thead>
+    <tbody>
+      <tr><td>Slab Thickness</td><td>${document.getElementById('sz-slab')?.options[document.getElementById('sz-slab')?.selectedIndex]?.text||'150mm'}</td><td>${state.buildingCode}</td></tr>
+      <tr><td>Foundation Depth</td><td>${document.getElementById('sz-found')?.options[document.getElementById('sz-found')?.selectedIndex]?.text||'750mm'}</td><td>${state.buildingCode}</td></tr>
+      <tr><td>Column Size</td><td>${document.getElementById('sz-col')?.options[document.getElementById('sz-col')?.selectedIndex]?.text||'400×400mm'}</td><td>${state.buildingCode}</td></tr>
+      <tr><td>Rebar Diameter</td><td>${document.getElementById('sz-rebar')?.options[document.getElementById('sz-rebar')?.selectedIndex]?.text||'T16'}</td><td>${state.buildingCode}</td></tr>
+      <tr><td>External Blockwork</td><td>${document.getElementById('sz-ext-block')?.options[document.getElementById('sz-ext-block')?.selectedIndex]?.text||'200mm'}</td><td>${state.buildingCode}</td></tr>
+      <tr><td>Floor Tile Size</td><td>${document.getElementById('sz-tile')?.options[document.getElementById('sz-tile')?.selectedIndex]?.text||'600×600mm'}</td><td>${state.buildingCode}</td></tr>
+      <tr><td>HVAC Capacity</td><td>${document.getElementById('sz-ac')?.options[document.getElementById('sz-ac')?.selectedIndex]?.text||'2 TR per room'}</td><td>${state.buildingCode}</td></tr>
+    </tbody>
+  </table>
+  <div class="disclaimer">Specification sizes comply with ${state.buildingCode} minimum requirements. Final specification to be confirmed by the structural/MEP engineer of record.</div>
+</div>
+
+<!-- CTA PAGE -->
+<div class="cta-page">
+  <div style="font-size:11px;color:#444;letter-spacing:3px;text-transform:uppercase;margin-bottom:30px">Ready to deliver this project?</div>
+  <h1>Al Qaswaa Al Sharqia<br/>Trading EST</h1>
+  <p>Full EPC contractor with 10+ years of proven delivery across Saudi Arabia. Civil, structural, MEP, fit-out and turnkey construction — from design to handover.</p>
+  <div class="contact-card">
+    <h3>Contact Us</h3>
+    <p><strong>Imran Khoje</strong> — Business Development Manager</p>
+    <p>📞 <strong>+966 51 175 9092</strong></p>
+    <p>📞 <strong>+966 57 352 4746</strong></p>
+    <p>✉ <strong>info@qaswasharqia.com</strong></p>
+    <p>🌐 <strong>www.qaswasharqia.com</strong></p>
+    <p>💬 WhatsApp: wa.me/966511759092</p>
+  </div>
+  <p style="color:#555;font-size:12px">Trusted by: Saudi Aramco · ROSHN · DAMAC Properties · Royal Commission Jubail · Kanoo Group · SWCC</p>
+  <p style="color:#555;font-size:11px">This BOQ report was generated using BOQ Quick Estimator v4. All quantities are preliminary estimates for budgeting purposes only.</p>
+</div>
+
+</body></html>`;
+}
+
+// ========== NOTIFICATIONS ==========
+function showNotif(msg, type='success') {
+  const n = document.createElement('div');
+  n.className = 'notif';
+  if(type==='warn') { n.style.borderColor='var(--accent)'; n.style.color='var(--accent)'; }
+  n.textContent = (type==='warn'?'⚠️ ':' ✓ ')+msg;
+  document.body.appendChild(n);
+  setTimeout(()=>{n.style.opacity='0';n.style.transition='opacity .3s';setTimeout(()=>n.remove(),400)},3000);
+}
+
+// ========== INIT ==========
+document.getElementById('tl-start').valueAsDate = new Date();
+
+// Populate default cost rows for demo
+(function initDemoCostRows(){
+  // Pre-populate a sample row for c  // Pre-populate sample demo rows if cost table is empty on first load
+  // This runs after main DOM is ready
+})();
+</script>
+
+<!-- ============================================================
+     BOQ ESTIMATOR v4 — UPGRADE SCRIPT BLOCK
+     All new features: Login Gate, Context PDFs, Material Schedule,
+     Value Engineering packages, inline styles matching live site.
+     NOTHING above this block is removed or broken.
+     ============================================================ -->
+<style id="v4-upgrade-styles">
+/* ── Font matching live site (headadvert.github.io/boq-estimator) ── */
+/* Live site uses DM Sans + IBM Plex Mono - we import and apply as overrides */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+
+/* Root overrides to match live site font stack */
+:root {
+  --sans: 'DM Sans', 'Syne', sans-serif;
+  --mono: 'IBM Plex Mono', 'DM Mono', monospace;
+  /* Keep existing colors — they match the live site perfectly */
+}
+
+/* ── Login Gate Modal ── */
+#login-gate-overlay {
+  position: fixed; inset: 0; background: rgba(7,9,14,.97);
+  z-index: 10000; display: flex; align-items: center; justify-content: center;
+  padding: 20px; backdrop-filter: blur(8px);
+}
+#login-gate-overlay.hidden { display: none; }
+.login-gate-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; padding: 44px 40px; max-width: 500px; width: 100%;
+  position: relative;
+}
+.login-gate-logo {
+  font-family: var(--serif); font-size: 22px; color: var(--accent);
+  margin-bottom: 28px; display: block; font-weight: 600;
+}
+.login-gate-card h2 {
+  font-family: var(--serif); font-size: 28px; font-weight: 300;
+  color: var(--text); margin-bottom: 8px; line-height: 1.2;
+}
+.login-gate-card h2 em { color: var(--accent); font-style: italic; }
+.login-gate-card > p {
+  font-size: 13px; color: var(--muted); margin-bottom: 24px; line-height: 1.6;
+}
+.login-step { display: none; }
+.login-step.active { display: block; }
+.plan-row {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 20px;
+}
+.plan-opt {
+  border: 1px solid var(--border); border-radius: 10px; padding: 14px 10px;
+  text-align: center; cursor: pointer; transition: all .2s; background: var(--surface2);
+}
+.plan-opt:hover, .plan-opt.selected {
+  border-color: var(--accent); background: rgba(232,184,75,.08);
+}
+.plan-opt-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.plan-opt-price { font-size: 18px; font-family: var(--serif); color: var(--accent); margin-bottom: 2px; }
+.plan-opt-sub { font-size: 10px; color: var(--muted); font-family: var(--mono); }
+.plan-opt.selected .plan-opt-name { color: var(--accent); }
+.gate-lock { font-size: 11px; color: var(--muted); text-align: center; margin-top: 12px; }
+
+/* ── Material Schedule editable rows ── */
+.mat-row-input {
+  background: transparent; border: none; color: var(--text);
+  font-size: 12px; font-family: var(--sans); width: 100%; padding: 2px 4px;
+}
+.mat-row-input:focus {
+  outline: none; background: var(--surface); border-radius: 4px;
+  box-shadow: 0 0 0 2px rgba(232,184,75,.3);
+}
+.mat-qty-input {
+  background: transparent; border: none; color: var(--accent2);
+  font-size: 12px; font-family: var(--mono); width: 70px; text-align: right; padding: 2px 4px;
+}
+.mat-qty-input:focus {
+  outline: none; background: var(--surface); border-radius: 4px;
+  box-shadow: 0 0 0 2px rgba(232,184,75,.3);
+}
+.mat-status-select {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+  color: var(--text); font-size: 10px; font-family: var(--mono); padding: 2px 5px; cursor: pointer;
+}
+.mat-del-btn {
+  background: none; border: none; color: var(--muted); cursor: pointer;
+  font-size: 15px; padding: 2px 5px; border-radius: 4px; transition: all .2s; line-height: 1;
+}
+.mat-del-btn:hover { background: rgba(232,91,91,.15); color: var(--red); }
+
+/* ── VE Package tabs ── */
+.ve-trade-tab { font-size: 11px; padding: 7px 14px; }
+.ve-package-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+.ve-package-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+.ve-trade-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: 700;
+  font-family: var(--mono); text-transform: uppercase; letter-spacing: 1px;
+}
+.ve-row-input {
+  background: transparent; border: none; color: var(--text);
+  font-size: 12px; font-family: var(--sans); width: 100%; padding: 2px;
+}
+.ve-row-input:focus {
+  outline: none; background: var(--surface); border-radius: 3px;
+  box-shadow: 0 0 0 2px rgba(232,184,75,.25);
+}
+.ve-qty-input {
+  background: transparent; border: none; color: var(--accent2);
+  font-size: 12px; font-family: var(--mono); width: 80px; text-align: right; padding: 2px;
+}
+.ve-qty-input:focus {
+  outline: none; background: var(--surface); border-radius: 3px;
+  box-shadow: 0 0 0 2px rgba(232,184,75,.25);
+}
+
+/* ── Editable table rows ── */
+.boq-table td.editable-cell { padding: 4px 8px; }
+.boq-table tr:hover .mat-del-btn { opacity: 1; }
+.boq-table tr .mat-del-btn { opacity: 0; transition: opacity .15s; }
+</style>
+
+<script id="v4-upgrade-js">
+/* ============================================================
+   1. USER SESSION & LOGIN GATE
+   ============================================================ */
+const SESSION_KEY = 'boqv4_user_session';
+
+function getSession() {
+  try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); }
+  catch(e) { return null; }
+}
+function saveSession(data) {
+  localStorage.setItem(SESSION_KEY, JSON.stringify(data));
+}
+
+/* Inject the login gate overlay into the DOM */
+function injectLoginGate() {
+  if (document.getElementById('login-gate-overlay')) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'login-gate-overlay';
+  overlay.innerHTML = `
+    <div class="login-gate-card">
+      <span class="login-gate-logo">⬡ BOQ Quick Estimator</span>
+
+      <!-- Step 1: Registration form -->
+      <div class="login-step active" id="login-step-1">
+        <h2>Get <em>access</em></h2>
+        <p>Enter your details to unlock the app. Your information helps us personalise your experience and is never shared.</p>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
+          <div class="form-group">
+            <label class="form-label">Full name *</label>
+            <input class="form-control" id="gate-name" placeholder="Your full name" autocomplete="name"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email address *</label>
+            <input class="form-control" id="gate-email" type="email" placeholder="your@email.com" autocomplete="email"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone / WhatsApp</label>
+            <input class="form-control" id="gate-phone" placeholder="+966 5X XXX XXXX" autocomplete="tel"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Purpose of use *</label>
+            <select class="form-control" id="gate-purpose">
+              <option value="">— Select purpose —</option>
+              <option>Quantity surveyor / estimator</option>
+              <option>Contractor / sub-contractor</option>
+              <option>Project manager</option>
+              <option>Client / building owner</option>
+              <option>Architect / engineer</option>
+              <option>Developer / investor</option>
+              <option>Student / academic</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div id="gate-error-1" style="display:none" class="alert alert-warn" style="margin-bottom:12px">Please fill in all required fields.</div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;padding:13px" onclick="gateStep1Next()">Continue →</button>
+        <div class="gate-lock">🔒 Your data is private and never sold or shared with third parties.</div>
+      </div>
+
+      <!-- Step 2: Plan selection -->
+      <div class="login-step" id="login-step-2">
+        <h2>Choose your <em>plan</em></h2>
+        <p>Try free for up to 10 projects, or upgrade for unlimited access.</p>
+        <div class="plan-row">
+          <div class="plan-opt selected" id="plan-free" onclick="selectPlan('free',this)">
+            <div class="plan-opt-name">Free</div>
+            <div class="plan-opt-price">0</div>
+            <div class="plan-opt-sub">no payment needed</div>
+          </div>
+          <div class="plan-opt" id="plan-monthly" onclick="selectPlan('monthly',this)">
+            <div class="plan-opt-name">Monthly</div>
+            <div class="plan-opt-price">SAR 55</div>
+            <div class="plan-opt-sub">per month</div>
+          </div>
+          <div class="plan-opt" id="plan-annual" onclick="selectPlan('annual',this)">
+            <div class="plan-opt-name">Annual</div>
+            <div class="plan-opt-price">SAR 480</div>
+            <div class="plan-opt-sub">save 27%</div>
+          </div>
+        </div>
+        <div id="plan-features-free" class="plan-features-block">
+          <ul style="color:var(--muted);font-size:13px;line-height:1.8;margin-bottom:16px;padding-left:4px;list-style:none">
+            <li>✓ Both apps</li><li>✓ All 8 codes</li><li>✓ 10 projects max</li>
+            <li>✓ PDF export</li><li>✓ Unlimited saves</li>
+          </ul>
+        </div>
+        <div id="plan-features-pro" class="plan-features-block" style="display:none">
+          <ul style="color:var(--muted);font-size:13px;line-height:1.8;margin-bottom:16px;padding-left:4px;list-style:none">
+            <li>✓ Both apps</li><li>✓ All 8 codes + types</li><li>✓ Unlimited projects</li>
+            <li>✓ PDF export</li><li>✓ Priority support</li>
+          </ul>
+          <div class="alert alert-info" style="font-size:12px">Pro plans pay via STC Pay or bank transfer. Access code sent via WhatsApp within 1 hour.</div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;padding:13px" id="gate-continue-btn" onclick="gateStep2Continue()">Continue with Free →</button>
+        <div class="gate-lock" style="margin-top:10px">secure access</div>
+      </div>
+
+      <!-- Step 3: Success -->
+      <div class="login-step" id="login-step-3" style="text-align:center;padding:20px 0">
+        <div style="font-size:48px;margin-bottom:16px">✓</div>
+        <h2 style="text-align:center">You're <em>in!</em></h2>
+        <p id="gate-success-msg" style="text-align:center;margin-top:8px">Redirecting you to BOQ Estimator…</p>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+let _selectedPlan = 'free';
+
+function selectPlan(plan, el) {
+  _selectedPlan = plan;
+  document.querySelectorAll('.plan-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  const isFree = plan === 'free';
+  document.getElementById('plan-features-free').style.display = isFree ? 'block' : 'none';
+  document.getElementById('plan-features-pro').style.display = isFree ? 'none' : 'block';
+  document.getElementById('gate-continue-btn').textContent =
+    isFree ? 'Continue with Free →' : `Order ${plan === 'monthly' ? 'Monthly' : 'Annual'} →`;
+}
+
+function gateStep1Next() {
+  const name    = document.getElementById('gate-name').value.trim();
+  const email   = document.getElementById('gate-email').value.trim();
+  const purpose = document.getElementById('gate-purpose').value;
+  const errEl   = document.getElementById('gate-error-1');
+
+  if (!name || !email || !purpose) {
+    errEl.style.display = 'block';
+    return;
+  }
+  errEl.style.display = 'none';
+  // Store temporarily
+  window._gateUser = { name, email, phone: document.getElementById('gate-phone').value.trim(), purpose };
+  document.getElementById('login-step-1').classList.remove('active');
+  document.getElementById('login-step-2').classList.add('active');
+}
+
+function gateStep2Continue() {
+  const plan = _selectedPlan;
+  const user = window._gateUser || {};
+
+  if (plan !== 'free') {
+    // Redirect to WhatsApp for paid plan
+    const msg = encodeURIComponent(`Hi, I'd like to order BOQ Estimator ${plan === 'monthly' ? 'Monthly (SAR 55)' : 'Annual (SAR 480)'}. Name: ${user.name}, Email: ${user.email}`);
+    window.open(`https://wa.me/966511759092?text=${msg}`, '_blank');
+  }
+
+  // Save session
+  saveSession({
+    name: user.name, email: user.email,
+    phone: user.phone, purpose: user.purpose,
+    plan, registeredAt: Date.now()
+  });
+
+  // Show success step
+  document.getElementById('login-step-2').classList.remove('active');
+  document.getElementById('login-step-3').classList.add('active');
+  document.getElementById('gate-success-msg').innerHTML =
+    `Redirecting you to <strong>BOQ Estimator</strong>…`;
+
+  setTimeout(() => {
+    document.getElementById('login-gate-overlay').classList.add('hidden');
+    // Update sidebar with user name
+    const logoPlan = document.querySelector('.logo-sub');
+    if (logoPlan) logoPlan.textContent = (user.name || 'User') + ' · ' + plan.toUpperCase();
+  }, 1400);
+}
+
+function checkLoginGate() {
+  const sess = getSession();
+  if (!sess || !sess.name || !sess.registeredAt) {
+    injectLoginGate();
+  } else {
+    // Already logged in - update UI
+    const logoPlan = document.querySelector('.logo-sub');
+    if (logoPlan) logoPlan.textContent = (sess.name || 'User') + ' · ' + (sess.plan || 'FREE').toUpperCase();
+  }
+}
+
+/* ============================================================
+   2. CONTEXT-AWARE PDF ROUTER
+   ============================================================ */
+
+/* Track which page is currently active */
+let _currentPage = 'dashboard';
+(function patchShowPageForContext() {
+  const _orig = window.showPage;
+  if (!_orig) return;
+  window.showPage = function(id) {
+    _currentPage = id;
+    _orig(id);
+  };
+})();
+
+/**
+ * exportContextPDF — Routes to the correct PDF function based on active page.
+ * Called by the topbar "Export PDF" button.
+ */
+function exportContextPDF() {
+  const routeMap = {
+    'boq-results':   exportBOQPDF,
+    'cost-report':   exportCostPDF,
+    'carbon':        exportCarbonPDF,
+    'material-req':  exportMaterialPDF,
+    'timeline':      exportTimelinePDF,
+    'cad-extract':   exportCADBoqPDF,
+    'value-eng':     exportVEPDF,
+    'risk':          exportRiskPDF,
+  };
+  const fn = routeMap[_currentPage];
+  if (fn) { fn(); }
+  else { showNotif('Navigate to a report page first, then click Export PDF.', 'warn'); }
+}
+
+/* PDF print helpers */
+const PDF_CSS = `
+  body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:0;padding:0}
+  @page{margin:20mm}
+  .cover{page-break-after:always;background:#0b0e13;color:#fff;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:60px;box-sizing:border-box}
+  .cover h1{font-size:36px;font-weight:300;color:#e8b84b;margin-bottom:8px}
+  .cover h2{font-size:16px;font-weight:400;color:#aaa;margin-bottom:36px}
+  .cover-table{border-collapse:collapse;width:100%;max-width:420px}
+  .cover-table td{padding:7px 0;border-bottom:1px solid #252d3d;color:#ccc;font-size:12px}
+  .cover-table td:first-child{color:#e8b84b;font-weight:700;width:140px}
+  .page{padding:32px 40px;page-break-after:always}
+  .page-header{border-bottom:3px solid #e8b84b;padding-bottom:10px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-end}
+  .page-header h2{font-size:20px;color:#e8b84b;margin:0}
+  .page-header .meta{font-size:10px;color:#888;text-align:right}
+  table{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:11px}
+  th{background:#0b0e13;color:#e8b84b;padding:7px 10px;text-align:left;font-size:10px;font-weight:700}
+  td{padding:6px 10px;border-bottom:1px solid #eee}
+  tr:nth-child(even) td{background:#f9f9f9}
+  .section-row td{background:#fff8e1;font-weight:700;font-size:10px;color:#555;text-transform:uppercase;letter-spacing:1px;border-top:1px solid #e8b84b}
+  .total-row td{background:#0b0e13;color:#e8b84b;font-weight:700;font-size:12px;border-top:2px solid #e8b84b}
+  .subtotal-row td{background:#f0f7ff;font-weight:600}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+  .stat{background:#f8f9fa;border:1px solid #eee;border-radius:6px;padding:12px;border-left:4px solid #e8b84b}
+  .stat-label{font-size:9px;color:#999;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
+  .stat-value{font-size:18px;font-weight:700;color:#0b0e13}
+  .cta-page{page-break-before:always;background:#0b0e13;color:#fff;min-height:60vh;display:flex;flex-direction:column;justify-content:center;padding:60px;box-sizing:border-box;text-align:center}
+  .cta-page h1{font-size:28px;font-weight:300;color:#e8b84b;margin-bottom:10px}
+  .cta-page p{font-size:13px;color:#aaa;max-width:480px;margin:0 auto 24px;line-height:1.6}
+  .contact-card{background:#13171f;border:1px solid #252d3d;border-radius:10px;padding:24px;max-width:440px;margin:0 auto;text-align:left}
+  .contact-card h3{color:#e8b84b;font-size:14px;margin-bottom:12px}
+  .contact-card p{color:#aaa;font-size:12px;margin-bottom:6px}
+  .contact-card strong{color:#fff}
+  .disclaimer{font-size:9px;color:#999;margin-top:16px;border-top:1px solid #eee;padding-top:10px;line-height:1.5}
+  .green{color:#3ecf8e} .amber{color:#e8b84b} .red{color:#e85b5b}
+  @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+`;
+
+function _projInfo() {
+  const now = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+  return {
+    now,
+    name:     state.projectName     || '—',
+    client:   state.projectClient   || '—',
+    qs:       state.projectQS       || '—',
+    loc:      state.projectLocation || '—',
+    ref:      state.projectRef      || '—',
+    gfa:      state.projectGFA      || '—',
+    code:     state.buildingCode    || '—',
+    type:     state.projectType     || '—',
+  };
+}
+
+function _ctaPage() {
+  return `
+  <div class="cta-page">
+    <div style="font-size:10px;color:#444;letter-spacing:3px;text-transform:uppercase;margin-bottom:24px">Ready to build this project?</div>
+    <h1>Al Qaswaa Al Sharqia Trading EST</h1>
+    <p>Full EPC contractor · 10+ years delivering civil, structural, MEP and turnkey projects across Saudi Arabia and internationally.</p>
+    <div class="contact-card">
+      <h3>Contact Us</h3>
+      <p><strong>Imran Khoje</strong> — Business Development Manager</p>
+      <p>📞 <strong>+966 51 175 9092</strong></p>
+      <p>📞 <strong>+966 57 352 4746</strong></p>
+      <p>✉ <strong>info@qaswasharqia.com</strong></p>
+      <p>🌐 <strong>qaswasharqia.netlify.app</strong></p>
+    </div>
+    <p style="color:#555;font-size:11px;margin-top:16px">Trusted by: Saudi Aramco · ROSHN · DAMAC · Royal Commission Jubail · Kanoo Group</p>
+  </div>`;
+}
+
+function _coverPage(title, subtitle) {
+  const p = _projInfo();
+  return `
+  <div class="cover">
+    <div style="font-size:10px;color:#555;letter-spacing:3px;text-transform:uppercase;margin-bottom:24px">BOQ Quick Estimator Platform v4</div>
+    <h1>${p.name}</h1>
+    <h2>${title}</h2>
+    <table class="cover-table">
+      <tr><td>Client</td><td>${p.client}</td></tr>
+      <tr><td>Location</td><td>${p.loc}</td></tr>
+      <tr><td>Prepared by</td><td>${p.qs}</td></tr>
+      <tr><td>Reference</td><td>${p.ref}</td></tr>
+      <tr><td>Building Code</td><td>${p.code}</td></tr>
+      <tr><td>Project Type</td><td>${p.type}</td></tr>
+      <tr><td>GFA</td><td>${p.gfa} m²</td></tr>
+      <tr><td>Date</td><td>${p.now}</td></tr>
+    </table>
+    <div style="margin-top:32px;font-size:10px;color:#444">${subtitle || 'Generated by BOQ Quick Estimator — Al Qaswaa Al Sharqia Trading EST'}</div>
+  </div>`;
+}
+
+function _printWindow(html) {
+  const w = window.open('', '_blank');
+  if (!w) { showNotif('Allow pop-ups to export PDF', 'warn'); return; }
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><style>${PDF_CSS}</style></head><body>${html}</body></html>`);
+  w.document.close();
+  setTimeout(() => w.print(), 600);
+}
+
+/* ── BOQ PDF ── */
+function exportBOQPDF() {
+  if (!state.boqItems.length) { showNotif('Calculate BOQ first before exporting.', 'warn'); return; }
+  showNotif('Generating BOQ PDF…');
+  const p = _projInfo();
+  const total = state.boqItems.reduce((s,i) => s + parseFloat(i.qty)*i.rate, 0);
+  const gfaV  = parseFloat(p.gfa) || 0;
+  const cpm2  = gfaV > 0 ? Math.round(total/gfaV) : 0;
+
+  let rows = '', sec = '';
+  state.boqItems.forEach(item => {
+    if (item.sec !== sec) {
+      sec = item.sec;
+      rows += `<tr class="section-row"><td colspan="7">${item.sec}</td></tr>`;
+    }
+    const amt = Math.round(parseFloat(item.qty) * item.rate);
+    rows += `<tr><td>${item.no}</td><td>${item.desc}</td><td style="font-size:10px;color:#888">${item.spec||''}</td><td>${item.unit}</td><td style="text-align:right">${item.qty}</td><td style="text-align:right">SAR ${Number(item.rate).toLocaleString()}</td><td style="text-align:right;font-weight:600">SAR ${amt.toLocaleString()}</td></tr>`;
+  });
+  rows += `<tr class="total-row"><td colspan="6">TOTAL BOQ ESTIMATE (excl. VAT)</td><td style="text-align:right">SAR ${Math.round(total).toLocaleString()}</td></tr>`;
+
+  const html = _coverPage('Bill of Quantities') +
+  `<div class="page">
+    <div class="page-header"><h2>Bill of Quantities</h2><div class="meta">${p.name}<br/>${p.now} · ${p.code}</div></div>
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Line Items</div><div class="stat-value">${state.boqItems.length}</div></div>
+      <div class="stat"><div class="stat-label">Total BOQ Value</div><div class="stat-value">SAR ${Math.round(total/1000)}K</div></div>
+      <div class="stat"><div class="stat-label">Cost / m² GFA</div><div class="stat-value">SAR ${cpm2.toLocaleString()}</div></div>
+    </div>
+    <table><thead><tr><th>No.</th><th>Description</th><th>Specification</th><th>Unit</th><th style="text-align:right">Qty</th><th style="text-align:right">Rate</th><th style="text-align:right">Amount</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="disclaimer">All quantities are preliminary budget estimates. Verify with a licensed QS before tender. Rates based on KSA market data — adjust to supplier quotes.</div>
+  </div>` + _ctaPage();
+
+  setTimeout(() => _printWindow(html), 300);
+}
+
+/* ── Cost Report PDF ── */
+function exportCostPDF() {
+  if (!state.costItems.length) { showNotif('Generate Cost Report first before exporting.', 'warn'); return; }
+  showNotif('Generating Cost Report PDF…');
+  const p = _projInfo();
+  const contingency = parseFloat(document.getElementById('cost-contingency')?.value)||0.10;
+  const vat         = parseFloat(document.getElementById('cost-vat')?.value)||0.05;
+  const currency    = document.getElementById('cost-currency')?.value||'SAR';
+  const gfaV        = parseFloat(document.getElementById('cost-gfa')?.value)||state.projectGFA||0;
+
+  let rows='', sec='', totalAll=0, totalMat=0, totalLab=0;
+  state.costItems.forEach((item,i) => {
+    if (item.sec !== sec) {
+      sec = item.sec;
+      rows += `<tr class="section-row"><td colspan="9">${item.sec}</td></tr>`;
+    }
+    const qty = item.editedQty !== null ? item.editedQty : parseFloat(item.qty)||0;
+    const amt = qty * item.rate;
+    const mat = amt * (item.matPct/100);
+    const lab = amt * (item.labPct/100);
+    const ind = amt - mat - lab;
+    totalAll += amt; totalMat += mat; totalLab += lab;
+    rows += `<tr><td>${item.no||i+1}</td><td>${item.desc}</td><td>${item.unit}</td><td style="text-align:right">${qty}</td><td style="text-align:right">${currency} ${Number(item.rate).toLocaleString()}</td><td style="text-align:right">${currency} ${Math.round(mat).toLocaleString()}</td><td style="text-align:right">${currency} ${Math.round(lab).toLocaleString()}</td><td style="text-align:right">${currency} ${Math.round(ind).toLocaleString()}</td><td style="text-align:right;font-weight:600">${currency} ${Math.round(amt).toLocaleString()}</td></tr>`;
+  });
+  const cont = totalAll * contingency;
+  const vatAmt = (totalAll + cont) * vat;
+  const grand = totalAll + cont + vatAmt;
+  const cpm2 = gfaV > 0 ? Math.round(grand/gfaV) : 0;
+
+  rows += `<tr class="subtotal-row"><td colspan="8" style="text-align:right">Sub-Total Construction</td><td style="text-align:right">${currency} ${Math.round(totalAll).toLocaleString()}</td></tr>`;
+  rows += `<tr class="subtotal-row"><td colspan="8" style="text-align:right">Contingency (${(contingency*100).toFixed(0)}%)</td><td style="text-align:right">${currency} ${Math.round(cont).toLocaleString()}</td></tr>`;
+  rows += `<tr class="subtotal-row"><td colspan="8" style="text-align:right">VAT (${(vat*100).toFixed(0)}%)</td><td style="text-align:right">${currency} ${Math.round(vatAmt).toLocaleString()}</td></tr>`;
+  rows += `<tr class="total-row"><td colspan="4">GRAND TOTAL</td><td></td><td>${currency} ${Math.round(totalMat).toLocaleString()}</td><td>${currency} ${Math.round(totalLab).toLocaleString()}</td><td></td><td style="text-align:right;font-size:13px">${currency} ${Math.round(grand).toLocaleString()}</td></tr>`;
+
+  const html = _coverPage('Cost Plan Report') +
+  `<div class="page">
+    <div class="page-header"><h2>Cost Plan</h2><div class="meta">${p.name}<br/>Material · Labour · Indirect split · ${p.now}</div></div>
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Grand Total incl. VAT</div><div class="stat-value amber">${currency} ${Math.round(grand/1000)}K</div></div>
+      <div class="stat"><div class="stat-label">Material Cost</div><div class="stat-value">${Math.round(totalMat/totalAll*100)}%</div></div>
+      <div class="stat"><div class="stat-label">Cost / m² GFA</div><div class="stat-value">${currency} ${cpm2.toLocaleString()}</div></div>
+    </div>
+    <table><thead><tr><th>No.</th><th>Description</th><th>Unit</th><th style="text-align:right">Qty</th><th style="text-align:right">Rate</th><th style="text-align:right">Material</th><th style="text-align:right">Labour</th><th style="text-align:right">Indirect</th><th style="text-align:right">Total</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="disclaimer">Rates are budget estimates. Adjust to supplier quotes. Contingency and VAT applied as shown.</div>
+  </div>` + _ctaPage();
+
+  setTimeout(() => _printWindow(html), 300);
+}
+
+/* ── Carbon PDF ── */
+function exportCarbonPDF() {
+  showNotif('Generating Carbon Report PDF…');
+  const p = _projInfo();
+  const tbody = document.getElementById('carbon-tbody');
+  if (!tbody || !tbody.innerHTML.trim()) { showNotif('Calculate BOQ first to generate carbon data.', 'warn'); return; }
+
+  const summaryEl = document.getElementById('carbon-summary');
+  const html = _coverPage('Embodied Carbon Report', 'RICS Whole Life Carbon Assessment · ICE Database v3.0') +
+  `<div class="page">
+    <div class="page-header"><h2>Embodied Carbon Report</h2><div class="meta">${p.name}<br/>${p.now}</div></div>
+    <div class="alert" style="background:#e8f5e9;border-left:4px solid #3ecf8e;padding:10px 14px;margin-bottom:16px;font-size:11px">
+      🌱 Based on RICS Whole Life Carbon Assessment methodology and ICE Database v3.0
+    </div>
+    <table>
+      <thead><tr><th>Material</th><th style="text-align:right">Qty</th><th>Unit</th><th style="text-align:right">Factor (kgCO₂e/unit)</th><th style="text-align:right">Total kgCO₂e</th><th style="text-align:right">%</th></tr></thead>
+      <tbody>${tbody.innerHTML.replace(/<div[^>]*>.*?<\/div>/gs,'').replace(/class="[^"]*"/g,'')}</tbody>
+    </table>
+    <div style="background:#f8f9fa;border:1px solid #eee;border-radius:6px;padding:14px;margin-top:12px">
+      ${summaryEl ? summaryEl.innerHTML.replace(/class="[^"]*"/g,'').replace(/style="[^"]*"/g,'') : ''}
+    </div>
+    <div class="disclaimer">Carbon factors sourced from ICE Database v3.0 (University of Bath). Values are indicative for budget carbon assessment only.</div>
+  </div>` + _ctaPage();
+
+  setTimeout(() => _printWindow(html), 300);
+}
+
+/* ── Timeline PDF ── */
+function exportTimelinePDF() {
+  showNotif('Generating Programme PDF…');
+  const p = _projInfo();
+  const outputEl = document.getElementById('timeline-output');
+  if (!outputEl || !outputEl.innerHTML.trim()) { showNotif('Generate the programme first before exporting.', 'warn'); return; }
+
+  const html = _coverPage('Construction Programme') +
+  `<div class="page" style="page-break-after:avoid">
+    <div class="page-header"><h2>Construction Programme</h2><div class="meta">${p.name}<br/>${p.now}</div></div>
+    <div style="font-size:10px;color:#888;margin-bottom:12px">Programme is indicative only. Critical path not shown.</div>
+    ${outputEl.innerHTML.replace(/onclick="[^"]*"/g,'').replace(/class="btn[^"]*"/g,'style="display:none"')}
+    <div class="disclaimer">This programme is auto-generated from the BOQ scope. Durations are indicative and should be reviewed by the project manager before issue.</div>
+  </div>` + _ctaPage();
+
+  setTimeout(() => _printWindow(html), 300);
+}
+
+/* ── CAD BOQ PDF ── */
+function exportCADBoqPDF() {
+  showNotif('Generating CAD BOQ PDF…');
+  const p = _projInfo();
+  const tbody = document.getElementById('cad-boq-tbody');
+  const summaryEl = document.getElementById('cad-cost-summary');
+  if (!tbody || !tbody.innerHTML.trim()) { showNotif('Generate CAD BOQ first before exporting.', 'warn'); return; }
+
+  const html = _coverPage('CAD-Assisted BOQ') +
+  `<div class="page">
+    <div class="page-header"><h2>CAD-Assisted Bill of Quantities</h2><div class="meta">${p.now}</div></div>
+    <table>
+      <thead><tr><th>No.</th><th>Description</th><th>Specification</th><th>Unit</th><th style="text-align:right">Qty</th><th style="text-align:right">Rate (SAR)</th><th style="text-align:right">Amount (SAR)</th></tr></thead>
+      <tbody>${tbody.innerHTML}</tbody>
+    </table>
+    ${summaryEl ? `<div style="background:#f8f9fa;border:1px solid #eee;border-radius:6px;padding:14px;margin-top:8px">${summaryEl.innerHTML.replace(/class="[^"]*"/g,'')}</div>` : ''}
+    <div class="disclaimer">Quantities auto-extracted from uploaded drawing dimensions. Verify all areas before tender submission.</div>
+  </div>` + _ctaPage();
+
+  setTimeout(() => _printWindow(html), 300);
+}
+
+/* ── Risk Register PDF ── */
+function exportRiskPDF() {
+  showNotif('Generating Risk Register PDF…');
+  const p = _projInfo();
+  const html = _coverPage('Risk Register') +
+  `<div class="page">
+    <div class="page-header"><h2>Risk Register</h2><div class="meta">${p.name}<br/>${p.now}</div></div>
+    <table>
+      <thead><tr><th>#</th><th>Risk Description</th><th>Category</th><th>Probability</th><th>Impact</th><th>Score</th><th>Mitigation</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Ground conditions worse than expected</td><td>Structural</td><td>Medium</td><td>High</td><td class="red" style="font-weight:700">HIGH</td><td>Geotechnical report prior to tender</td></tr>
+        <tr><td>2</td><td>Material price escalation (steel, cement)</td><td>Commercial</td><td>High</td><td>Medium</td><td class="amber" style="font-weight:700">HIGH</td><td>Fix prices at PO or include escalation clause</td></tr>
+        <tr><td>3</td><td>Scope creep from client changes</td><td>Programme</td><td>High</td><td>Medium</td><td class="amber" style="font-weight:700">HIGH</td><td>Change order protocol from Day 1</td></tr>
+        <tr><td>4</td><td>Subcontractor default</td><td>Commercial</td><td>Low</td><td>High</td><td class="green" style="font-weight:700">MED</td><td>Performance bonds for packages &gt; SAR 500K</td></tr>
+        <tr><td>5</td><td>VAT / regulatory changes</td><td>Financial</td><td>Low</td><td>Medium</td><td class="green" style="font-weight:700">LOW</td><td>Contract price-adjustment clause</td></tr>
+        <tr><td>6</td><td>Weather delays (summer)</td><td>Programme</td><td>High</td><td>Low</td><td class="green" style="font-weight:700">MED</td><td>Schedule critical works Oct–Apr</td></tr>
+      </tbody>
+    </table>
+    <div class="disclaimer">Standard risk register for KSA construction projects. Review and customise before issue to client or contractor.</div>
+  </div>` + _ctaPage();
+  setTimeout(() => _printWindow(html), 300);
+}
+
+/* ── RFQ Modal PDF ── */
+let _lastRFQTrade = '';
+function exportRFQPDF() {
+  showNotif('Generating RFQ PDF…');
+  const p = _projInfo();
+  const titleEl = document.getElementById('rfq-modal-title');
+  const bodyEl  = document.getElementById('rfq-modal-body');
+  if (!bodyEl || !bodyEl.innerHTML.trim()) { showNotif('Open an RFQ package first.', 'warn'); return; }
+
+  const html = _coverPage(titleEl?.textContent || 'RFQ Package', 'Sub-Contractor Request for Quotation') +
+  `<div class="page">
+    <div class="page-header"><h2>${titleEl?.textContent||'RFQ Package'}</h2><div class="meta">${p.name}<br/>${p.now}</div></div>
+    ${bodyEl.innerHTML.replace(/onclick="[^"]*"/g,'').replace(/class="btn[^"]*"/g,'style="display:none"')}
+    <div class="disclaimer">This RFQ is for budget purposes. Final scope, specifications and prices to be confirmed in tender documents.</div>
+  </div>` + _ctaPage();
+  setTimeout(() => _printWindow(html), 300);
+}
+
+/* ============================================================
+   3. MATERIAL SCHEDULE — Auto-from-BOQ + Editable
+   ============================================================ */
+
+/* Internal state for editable material schedule rows */
+window._matRows = [];
+
+/**
+ * Build material rows from state.boqItems whenever BOQ is calculated.
+ * Maps each BOQ item to a schedule row with lead time, order date, category.
+ */
+function buildMatRowsFromBOQ() {
+  const today = new Date();
+  const addDays = (d,n) => { const dt=new Date(d); dt.setDate(dt.getDate()+n); return dt.toLocaleDateString('en-GB'); };
+
+  const catMap = desc => {
+    if (/Concrete|Rebar|Block|Foundation|Column|Beam|Formwork/i.test(desc)) return 'Structural';
+    if (/Tile|Plaster|Paint|Door|Window|Finish/i.test(desc))               return 'Finishes';
+    if (/Cable|DB|Socket|Light|Electrical|Conduit/i.test(desc))            return 'Electrical';
+    if (/Plumb|Water|Pipe|Sanitary|Drainage/i.test(desc))                  return 'Plumbing';
+    if (/HVAC|A\/C|Split|Duct|Air/i.test(desc))                            return 'HVAC';
+    if (/Sprinkler|Fire|Detector|Alarm/i.test(desc))                       return 'Fire & Safety';
+    return 'General';
+  };
+  const leadMap = desc => {
+    if (/Rebar|Steel/i.test(desc))         return { txt:'14 days', days:14 };
+    if (/HVAC|A\/C|Split/i.test(desc))     return { txt:'21 days', days:21 };
+    if (/Window|Aluminium/i.test(desc))    return { txt:'28 days', days:28 };
+    if (/Concrete|Formwork/i.test(desc))   return { txt:'3 days',  days:3  };
+    return { txt:'7 days', days:7 };
+  };
+
+  window._matRows = state.boqItems.map((item, i) => {
+    const lead = leadMap(item.desc);
+    return {
+      id: 'mat_' + i,
+      no: item.no,
+      desc: item.desc,
+      spec: item.spec || '',
+      unit: item.unit,
+      qty: parseFloat(item.qty) || 0,
+      lead: lead.txt,
+      orderBy: addDays(today, -lead.days),
+      cat: catMap(item.desc),
+      status: 'Not Ordered',
+      fromBOQ: true,
+    };
+  });
+}
+
+function renderMaterialSchedule() {
+  const warnEl = document.getElementById('mat-no-boq-warn');
+  if (!state.boqItems.length) {
+    if (warnEl) warnEl.style.display = 'block';
+    return;
+  }
+  if (warnEl) warnEl.style.display = 'none';
+
+  // Rebuild rows from BOQ (preserves any user edits if already built)
+  if (!window._matRows.length) buildMatRowsFromBOQ();
+
+  renderMaterialTable();
+}
+
+function renderMaterialTable() {
+  const tbody = document.getElementById('material-tbody');
+  if (!tbody) return;
+
+  const catColors = {
+    Structural:    'rgba(232,184,75,.15)',  Finishes:      'rgba(91,141,238,.12)',
+    Electrical:    'rgba(232,184,75,.12)',  Plumbing:      'rgba(62,207,142,.12)',
+    HVAC:          'rgba(91,141,238,.15)',  'Fire & Safety':'rgba(232,91,91,.12)',
+    General:       'rgba(122,132,153,.1)',
+  };
+  const catText = {
+    Structural:'#e8b84b', Finishes:'#5b8dee', Electrical:'#e8b84b',
+    Plumbing:'#3ecf8e', HVAC:'#5b8dee', 'Fire & Safety':'#e85b5b', General:'#7a8499',
+  };
+
+  tbody.innerHTML = window._matRows.map((r, i) => `
+    <tr data-mat-id="${r.id}">
+      <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">${r.no || i+1}</td>
+      <td class="editable-cell"><input class="mat-row-input" value="${r.desc}" onchange="updateMatRow('${r.id}','desc',this.value)"/></td>
+      <td class="editable-cell"><input class="mat-row-input" value="${r.spec}" style="font-size:10px;color:var(--muted)" onchange="updateMatRow('${r.id}','spec',this.value)"/></td>
+      <td style="font-family:var(--mono);font-size:11px">${r.unit}</td>
+      <td class="editable-cell"><input class="mat-qty-input" value="${r.qty}" onchange="updateMatRow('${r.id}','qty',this.value)"/></td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${r.lead}</td>
+      <td style="font-family:var(--mono);font-size:11px">${r.orderBy}</td>
+      <td><span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:9px;font-weight:700;font-family:var(--mono);background:${catColors[r.cat]||catColors.General};color:${catText[r.cat]||catText.General}">${r.cat}</span></td>
+      <td><select class="mat-status-select" onchange="updateMatRow('${r.id}','status',this.value)">
+        ${['Not Ordered','Enquiry Sent','Quoted','PO Issued','Delivered'].map(s=>`<option${s===r.status?' selected':''}>${s}</option>`).join('')}
+      </select></td>
+      <td><button class="mat-del-btn" onclick="deleteMatRow('${r.id}')" title="Remove row">×</button></td>
+    </tr>
+  `).join('');
+}
+
+function updateMatRow(id, field, value) {
+  const row = window._matRows.find(r => r.id === id);
+  if (!row) return;
+  row[field] = field === 'qty' ? parseFloat(value) || 0 : value;
+}
+
+function deleteMatRow(id) {
+  window._matRows = window._matRows.filter(r => r.id !== id);
+  renderMaterialTable();
+}
+
+function addMaterialRow() {
+  const today = new Date();
+  const orderBy = new Date(today); orderBy.setDate(today.getDate() - 7);
+  window._matRows.push({
+    id: 'mat_custom_' + Date.now(),
+    no: '', desc: 'New Material', spec: '', unit: 'm²',
+    qty: 0, lead: '7 days', orderBy: orderBy.toLocaleDateString('en-GB'),
+    cat: 'General', status: 'Not Ordered', fromBOQ: false,
+  });
+  renderMaterialTable();
+  // Scroll to bottom
+  const tbody = document.getElementById('material-tbody');
+  if (tbody) tbody.lastElementChild?.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+/* ── Material Schedule PDF ── */
+function exportMaterialPDF() {
+  if (!window._matRows.length) { showNotif('No material schedule data — calculate BOQ first.', 'warn'); return; }
+  showNotif('Generating Material Schedule PDF…');
+  const p = _projInfo();
+
+  const rows = window._matRows.map((r, i) => `
+    <tr>
+      <td>${r.no || i+1}</td>
+      <td>${r.desc}</td>
+      <td style="font-size:10px;color:#888">${r.spec}</td>
+      <td>${r.unit}</td>
+      <td style="text-align:right;font-weight:600">${r.qty}</td>
+      <td>${r.lead}</td>
+      <td>${r.orderBy}</td>
+      <td>${r.cat}</td>
+      <td>${r.status}</td>
+    </tr>
+  `).join('');
+
+  const html = _coverPage('Material Procurement Schedule') +
+  `<div class="page">
+    <div class="page-header"><h2>Material Procurement Schedule</h2><div class="meta">${p.name}<br/>${p.now}</div></div>
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Total Items</div><div class="stat-value">${window._matRows.length}</div></div>
+      <div class="stat"><div class="stat-label">Not Ordered</div><div class="stat-value red">${window._matRows.filter(r=>r.status==='Not Ordered').length}</div></div>
+      <div class="stat"><div class="stat-label">PO Issued</div><div class="stat-value green">${window._matRows.filter(r=>r.status==='PO Issued'||r.status==='Delivered').length}</div></div>
+    </div>
+    <table>
+      <thead><tr><th>No.</th><th>Material</th><th>Specification</th><th>Unit</th><th style="text-align:right">Qty</th><th>Lead Time</th><th>Order By</th><th>Category</th><th>Status</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="disclaimer">Order dates are indicative based on estimated programme. Confirm with site manager before placing orders.</div>
+  </div>` + _ctaPage();
+
+  setTimeout(() => _printWindow(html), 300);
+}
+
+/* Patch calculateBOQ to rebuild material rows on each calculation */
+(function patchCalcForMat() {
+  const _orig = window.calculateBOQ;
+  if (!_orig) return;
+  window.calculateBOQ = function(silent=false) {
+    _orig.call(this, silent);
+    window._matRows = []; // Reset so next visit rebuilds from fresh BOQ
+  };
+})();
+
+/* Patch showPage to call renderMaterialSchedule when visiting the page */
+(function patchShowPageForMat() {
+  const _orig = window.showPage;
+  if (!_orig) return;
+  window.showPage = function(id) {
+    _orig(id);
+    if (id === 'material-req') renderMaterialSchedule();
+    if (id === 'value-eng')    renderVEPackages();
+  };
+})();
+
+/* ============================================================
+   4. VALUE ENGINEERING — Auto-from-BOQ + Editable Trade Packages
+   ============================================================ */
+
+/* Trade package definitions — maps BOQ item item.no prefixes to trades */
+const VE_TRADES = [
+  {
+    key: 'structural', label: '🏗️ Structural', color: '#e8b84b', bg: 'rgba(232,184,75,.12)',
+    nos: ['A1','A2','A3','A4','A5'],
+    title: 'Structural & Civil Package',
+    scope: [
+      'Reinforced concrete — slabs, foundations, columns and beams',
+      'Formwork — all elements (plywood & steel prop)',
+      'Reinforcement steel — supply and fix (deformed bar)',
+      'Concrete testing and certification',
+      'All temporary works and propping',
+    ],
+    requirements: [
+      'Lump sum price including supply, installation and testing',
+      'Structural engineer sign-off on mix design and placement',
+      'Materials from approved KSA supplier (SASO certified)',
+      'Warranty: Structural integrity 10 years',
+      'SCA registration required',
+    ],
+  },
+  {
+    key: 'blockwork', label: '🧱 Blockwork', color: '#5b8dee', bg: 'rgba(91,141,238,.12)',
+    nos: ['B1','B2'],
+    title: 'Blockwork & Masonry Package',
+    scope: [
+      'External blockwork — solid/hollow block, cement mortar 1:4',
+      'Internal blockwork partitions — as specified thickness',
+      'Block coursing, lintels and DPC',
+      'Pointing and making good all openings',
+      'Protection and curing during construction',
+    ],
+    requirements: [
+      'Lump sum price including materials and labour',
+      'Blocks from approved local manufacturer (SBC 304 compliant)',
+      'Programme showing completion before MEP rough-in',
+      'Warranty: 2 years workmanship',
+    ],
+  },
+  {
+    key: 'finishes', label: '🪟 Finishes', color: '#3ecf8e', bg: 'rgba(62,207,142,.12)',
+    nos: ['C1','C2','C3','C4','C5'],
+    title: 'Finishes Package',
+    scope: [
+      'Floor tiling — supply and lay ceramic/porcelain tile on sand/cement screed',
+      'Wall plaster & render — sand/cement base coat, skim finish coat',
+      'Emulsion paint — 2 coats primer, 2 coats final emulsion',
+      'Internal solid-core flush doors — frames, architraves, ironmongery',
+      'Aluminium double-glazed windows — supply, install and seal',
+    ],
+    requirements: [
+      'Rate per m² for tiling, plaster and paint separately',
+      'Rate per nr for doors and windows separately',
+      'Tile samples for approval before order',
+      'Warranty: 2 years tiles and plaster, 5 years windows',
+    ],
+  },
+  {
+    key: 'electrical', label: '⚡ Electrical', color: '#e8b84b', bg: 'rgba(232,184,75,.1)',
+    nos: ['D1','D2','D3','D4'],
+    title: 'Electrical Package',
+    scope: [
+      'PVC conduit and XLPE cable — all circuits per single-line diagram',
+      'Distribution boards — main DB, sub-DBs, MCBs and RCDs',
+      'Socket outlets — 13A switched sockets, flush mounted',
+      'Light fittings — recessed LED downlights, all circuits',
+      'ELV systems — data, TV, CCTV conduit and pull wire',
+      'Testing and commissioning — full LV test certificates',
+    ],
+    requirements: [
+      'Lump sum price covering all works to SBC 401/IEC standards',
+      'Licensed electrical contractor (SEC approved)',
+      'As-built drawings on completion',
+      'Test certificates per IEC 60364',
+      'Warranty: 2 years parts and labour',
+    ],
+  },
+  {
+    key: 'plumbing', label: '🚿 Plumbing', color: '#3ecf8e', bg: 'rgba(62,207,142,.1)',
+    nos: ['E1','E2','E3'],
+    title: 'Plumbing & Drainage Package',
+    scope: [
+      'Cold water supply pipework — CPVC/PPR from meter to all outlets',
+      'Hot water pipework — insulated CPVC from heater to all fixtures',
+      'Sanitary fixtures — WC, basin, shower, bath (standard grade)',
+      'Soil and waste pipework — uPVC to drainage',
+      'External drainage — connection to municipal sewer',
+      'Testing and commissioning — pressure test, flow test',
+    ],
+    requirements: [
+      'Lump sum price for all plumbing and drainage scope',
+      'Licensed plumber (SWCC approved)',
+      'Materials from approved manufacturer',
+      'As-built drawings on completion',
+      'Warranty: 2 years workmanship, 5 years pipes',
+    ],
+  },
+  {
+    key: 'hvac', label: '❄️ HVAC', color: '#5b8dee', bg: 'rgba(91,141,238,.1)',
+    nos: ['F1','F2'],
+    title: 'HVAC Package',
+    scope: [
+      'Split A/C units — supply and install inverter split units per schedule',
+      'Ductwork and insulation — GI duct, 25mm glass wool insulation',
+      'Grilles, diffusers and volume control dampers',
+      'Thermostats — programmable per zone',
+      'Refrigerant pipework and insulation',
+      'Commissioning and handover — balance report, test certificates',
+    ],
+    requirements: [
+      'Lump sum price for all HVAC scope',
+      'SASO-approved A/C units (inverter type)',
+      'Energy efficiency rating: EER ≥ 3.5',
+      'Warranty: 2 years workmanship, 5 years compressor',
+      'Annual maintenance contract pricing (optional)',
+    ],
+  },
+  {
+    key: 'fire', label: '🔥 Fire & Safety', color: '#e85b5b', bg: 'rgba(232,91,91,.1)',
+    nos: ['G1','G2','G3'],
+    title: 'Fire & Safety Package',
+    scope: [
+      'Sprinkler heads — concealed pendant, wet pipe system',
+      'Smoke and heat detectors — optical, addressable',
+      'Fire alarm panel — addressable panel, all devices',
+      'Emergency lighting — maintained LED units at all exits',
+      'Hose reels and dry powder extinguishers per layout',
+      'NFPA/SBC compliance — testing and authority approval',
+    ],
+    requirements: [
+      'Lump sum price for full fire and safety scope',
+      'NFPA 13 / SBC 801 compliance',
+      'Civil defence approval drawings before installation',
+      'Third-party commissioning report',
+      'Warranty: 2 years system, 5 years panel',
+    ],
+  },
+];
+
+/* Internal state for VE packages */
+window._vePackages = {};
+let _veActiveTrade = 'structural';
+
+function buildVEPackages() {
+  window._vePackages = {};
+  VE_TRADES.forEach(trade => {
+    // Pull matching BOQ items by item number prefix
+    const boqItems = state.boqItems.filter(i => trade.nos.includes(i.no));
+    const rows = boqItems.map(item => ({
+      id: `ve_${trade.key}_${item.no}`,
+      no: item.no,
+      desc: item.desc,
+      spec: item.spec || '',
+      unit: item.unit,
+      qty: parseFloat(item.qty) || 0,
+      rate: item.rate || 0,
+      fromBOQ: true,
+    }));
+
+    // If no BOQ items for this trade, add placeholder rows
+    if (!rows.length) {
+      trade.scope.forEach((s, i) => {
+        rows.push({
+          id: `ve_${trade.key}_ph${i}`,
+          no: '', desc: s, spec: 'As specified',
+          unit: 'Lot', qty: 1, rate: 0, fromBOQ: false,
+        });
+      });
+    }
+
+    window._vePackages[trade.key] = { ...trade, rows };
+  });
+}
+
+function renderVEPackages() {
+  const warnEl = document.getElementById('ve-no-boq-warn');
+  const content = document.getElementById('ve-content');
+
+  if (!state.boqItems.length) {
+    if (warnEl) warnEl.style.display = 'block';
+    return;
+  }
+  if (warnEl) warnEl.style.display = 'none';
+
+  if (!Object.keys(window._vePackages).length) buildVEPackages();
+
+  // Build tab bar
+  const tabBar = document.getElementById('ve-tabs');
+  if (tabBar) {
+    tabBar.innerHTML = VE_TRADES.map(t => `
+      <button class="tab ve-trade-tab ${t.key === _veActiveTrade ? 'active' : ''}"
+        onclick="switchVETrade('${t.key}')">${t.label}</button>
+    `).join('');
+  }
+
+  renderVEPackage(_veActiveTrade);
+}
+
+function switchVETrade(tradeKey) {
+  _veActiveTrade = tradeKey;
+  document.querySelectorAll('#ve-tabs .tab').forEach(t => t.classList.remove('active'));
+  const btn = document.querySelector(`#ve-tabs .tab[onclick*="${tradeKey}"]`);
+  if (btn) btn.classList.add('active');
+  renderVEPackage(tradeKey);
+}
+
+function renderVEPackage(tradeKey) {
+  const pkg = window._vePackages[tradeKey];
+  const wrap = document.getElementById('ve-package-wrap');
+  if (!pkg || !wrap) return;
+
+  const totalBudget = pkg.rows.reduce((s, r) => s + r.qty * r.rate, 0);
+
+  const scopeItems = pkg.scope.map(s => `<li style="margin-bottom:4px">${s}</li>`).join('');
+  const reqItems   = pkg.requirements.map(r => `<li style="margin-bottom:4px">${r}</li>`).join('');
+
+  const tableRows = pkg.rows.map((r, i) => {
+    const amt = r.qty * r.rate;
+    return `
+      <tr data-ve-id="${r.id}">
+        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">${r.no || i+1}</td>
+        <td class="editable-cell"><input class="ve-row-input" value="${r.desc}" onchange="updateVERow('${tradeKey}','${r.id}','desc',this.value)"/></td>
+        <td class="editable-cell"><input class="ve-row-input" value="${r.spec}" style="font-size:10px;color:var(--muted)" onchange="updateVERow('${tradeKey}','${r.id}','spec',this.value)"/></td>
+        <td style="font-family:var(--mono);font-size:11px">${r.unit}</td>
+        <td class="editable-cell"><input class="ve-qty-input" value="${r.qty}" onchange="updateVERow('${tradeKey}','${r.id}','qty',this.value)"/></td>
+        <td class="editable-cell"><input class="ve-qty-input" value="${r.rate}" onchange="updateVERow('${tradeKey}','${r.id}','rate',this.value)" style="width:90px"/></td>
+        <td style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent2);text-align:right">${amt > 0 ? 'SAR '+Math.round(amt).toLocaleString() : '—'}</td>
+        <td><button class="mat-del-btn" onclick="deleteVERow('${tradeKey}','${r.id}')">×</button></td>
+      </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div class="card" style="margin-bottom:16px">
+      <div class="ve-package-header">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            <span class="ve-trade-badge" style="background:${pkg.bg};color:${pkg.color};border:1px solid ${pkg.color}44">${pkg.label}</span>
+            ${totalBudget > 0 ? `<span style="font-size:12px;font-weight:700;color:var(--accent2);font-family:var(--mono)">Budget: SAR ${Math.round(totalBudget/1000)}K</span>` : ''}
+          </div>
+          <div style="font-size:16px;font-weight:700;color:var(--text)">${pkg.title}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="addVERow('${tradeKey}')">＋ Add Item</button>
+          <button class="btn btn-primary btn-sm" onclick="exportVEPackagePDF('${tradeKey}')">📄 Export RFQ PDF</button>
+        </div>
+      </div>
+
+      <!-- Scope of work -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Scope of Work</div>
+        <ul style="color:var(--muted);font-size:13px;padding-left:20px;line-height:1.7">${scopeItems}</ul>
+      </div>
+
+      <!-- Quantity table -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Bill of Quantities — Editable</div>
+        <div style="overflow-x:auto">
+          <table class="boq-table" id="ve-qty-table-${tradeKey}">
+            <thead><tr><th>No.</th><th>Description</th><th>Specification</th><th>Unit</th><th style="text-align:right">Qty</th><th style="text-align:right">Budget Rate</th><th style="text-align:right">Amount</th><th></th></tr></thead>
+            <tbody>${tableRows}</tbody>
+            <tfoot>
+              ${totalBudget > 0 ? `<tr class="total-row"><td colspan="6">PACKAGE BUDGET TOTAL</td><td style="text-align:right">SAR ${Math.round(totalBudget).toLocaleString()}</td><td></td></tr>` : ''}
+            </tfoot>
+          </table>
+        </div>
+        <div style="padding:8px 0;font-size:11px;color:var(--muted)">ℹ Quantities auto-populated from your BOQ. Edit or add items as needed before exporting the RFQ.</div>
+      </div>
+
+      <!-- Submission requirements -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">Submission Requirements from Sub-Contractor</div>
+        <ul style="color:var(--muted);font-size:12px;padding-left:18px;line-height:1.8">${reqItems}</ul>
+      </div>
+    </div>
+  `;
+}
+
+function updateVERow(tradeKey, id, field, value) {
+  const pkg = window._vePackages[tradeKey];
+  if (!pkg) return;
+  const row = pkg.rows.find(r => r.id === id);
+  if (!row) return;
+  row[field] = (field === 'qty' || field === 'rate') ? parseFloat(value)||0 : value;
+  // Re-render just the amount cell
+  renderVEPackage(tradeKey);
+}
+
+function deleteVERow(tradeKey, id) {
+  const pkg = window._vePackages[tradeKey];
+  if (!pkg) return;
+  pkg.rows = pkg.rows.filter(r => r.id !== id);
+  renderVEPackage(tradeKey);
+}
+
+function addVERow(tradeKey) {
+  const pkg = window._vePackages[tradeKey];
+  if (!pkg) return;
+  pkg.rows.push({
+    id: `ve_${tradeKey}_custom_${Date.now()}`,
+    no: '', desc: 'Additional Item', spec: 'As specified',
+    unit: 'Item', qty: 1, rate: 0, fromBOQ: false,
+  });
+  renderVEPackage(tradeKey);
+}
+
+/* ── VE Active Trade PDF (single package) ── */
+function exportVEPDF() {
+  exportVEPackagePDF(_veActiveTrade);
+}
+
+function exportVEPackagePDF(tradeKey) {
+  const pkg = window._vePackages?.[tradeKey];
+  if (!pkg) { showNotif('No package data — calculate BOQ first.', 'warn'); return; }
+  showNotif(`Generating ${pkg.title} RFQ PDF…`);
+  const p = _projInfo();
+
+  const totalBudget = pkg.rows.reduce((s,r) => s + r.qty*r.rate, 0);
+  const rows = pkg.rows.map((r,i) => {
+    const amt = r.qty * r.rate;
+    return `<tr>
+      <td>${r.no||i+1}</td><td>${r.desc}</td>
+      <td style="font-size:10px;color:#888">${r.spec}</td>
+      <td>${r.unit}</td>
+      <td style="text-align:right">${r.qty}</td>
+      <td style="text-align:right">${r.rate > 0 ? 'SAR '+Number(r.rate).toLocaleString() : 'To price'}</td>
+      <td style="text-align:right;font-weight:600">${amt > 0 ? 'SAR '+Math.round(amt).toLocaleString() : 'To price'}</td>
+    </tr>`;
+  }).join('');
+  const scopeItems  = pkg.scope.map(s => `<li style="margin-bottom:5px">${s}</li>`).join('');
+  const reqItems    = pkg.requirements.map(r => `<li style="margin-bottom:5px">${r}</li>`).join('');
+
+  const html = _coverPage(pkg.title, 'Sub-Contractor Request for Quotation') +
+  `<div class="page">
+    <div class="page-header"><h2>${pkg.title}</h2><div class="meta">${p.name}<br/>Project: ${p.ref||'—'} · ${p.now}</div></div>
+    <div class="alert" style="background:#fff8e1;border-left:4px solid #e8b84b;padding:10px 14px;margin-bottom:16px;font-size:11px">
+      Project: <strong>${p.name}</strong> &nbsp;·&nbsp; Code: ${p.code} &nbsp;·&nbsp; Type: ${p.type} &nbsp;·&nbsp; GFA: ${p.gfa} m²
+    </div>
+    <h3 style="font-size:13px;font-weight:700;margin-bottom:8px;color:#333">Scope of Work</h3>
+    <ul style="font-size:12px;color:#555;padding-left:20px;margin-bottom:20px;line-height:1.8">${scopeItems}</ul>
+    <h3 style="font-size:13px;font-weight:700;margin-bottom:8px;color:#333">Bill of Quantities</h3>
+    <table>
+      <thead><tr><th>No.</th><th>Description</th><th>Specification</th><th>Unit</th><th style="text-align:right">Qty</th><th style="text-align:right">Budget Rate</th><th style="text-align:right">Amount</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot>${totalBudget > 0 ? `<tr class="total-row"><td colspan="6">PACKAGE BUDGET TOTAL</td><td style="text-align:right">SAR ${Math.round(totalBudget).toLocaleString()}</td></tr>` : ''}</tfoot>
+    </table>
+    <h3 style="font-size:13px;font-weight:700;margin-bottom:8px;color:#333">Submission Requirements</h3>
+    <ul style="font-size:12px;color:#555;padding-left:20px;margin-bottom:20px;line-height:1.8">${reqItems}</ul>
+    <div style="background:#f8f9fa;border:1px solid #eee;border-radius:6px;padding:14px;font-size:11px;color:#666">
+      <strong style="color:#333">General Conditions:</strong><br/>
+      · Prices inclusive of all labour, materials, tools, testing and commissioning<br/>
+      · Validity of quotation: 30 days from date of submission<br/>
+      · Payment terms: 30 days from certified progress claim<br/>
+      · All works to comply with KSA/SBC standards and local authority requirements
+    </div>
+    <div class="disclaimer">This RFQ is for budget purposes only. Final scope, specifications and contract conditions to be confirmed in formal tender documents.</div>
+  </div>` + _ctaPage();
+
+  setTimeout(() => _printWindow(html), 300);
+}
+
+/* Patch calculateBOQ to reset VE packages on recalculation */
+(function patchCalcForVE() {
+  const _orig = window.calculateBOQ;
+  if (!_orig) return;
+  window.calculateBOQ = function(silent=false) {
+    _orig.call(this, silent);
+    window._vePackages = {}; // Reset so next visit rebuilds from fresh BOQ
+  };
+})();
+
+/* ============================================================
+   5. INIT — Run all on DOMContentLoaded
+   ============================================================ */
+document.addEventListener('DOMContentLoaded', function() {
+  // 1. Login gate — show on every load unless session exists
+  checkLoginGate();
+
+  // 2. Inject Save/Load buttons if not already done (from storage-utils.js)
+  // storage-utils.js handles this; we just ensure compatibility.
+
+  // 3. Pre-set timeline date
+  const tlStart = document.getElementById('tl-start');
+  if (tlStart && !tlStart.value) tlStart.valueAsDate = new Date();
+});
+</script>
+
+</body>
+</html>

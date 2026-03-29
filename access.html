@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Enter Access Code — BOQ Quick Estimator</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,300;9..144,400&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#0b0e13;--surface:#13171f;--surface2:#1c2230;--border:#252d3d;--accent:#e8b84b;--accent2:#3ecf8e;--red:#e85b5b;--text:#f0f2f7;--muted:#7a8499;--mono:'DM Mono',monospace;--sans:'Syne',sans-serif;--serif:'Fraunces',serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 50% at 50% 0%,rgba(232,184,75,.07),transparent 70%);pointer-events:none}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:48px;max-width:480px;width:100%;text-align:center;position:relative;z-index:1}
+.logo{font-family:var(--serif);font-size:18px;color:var(--accent);margin-bottom:32px;display:block}
+h1{font-family:var(--serif);font-size:32px;font-weight:300;color:var(--text);margin-bottom:10px}
+h1 em{color:var(--accent);font-style:italic}
+p{font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:32px}
+.input-wrap{position:relative;margin-bottom:16px}
+input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 18px;color:var(--text);font-size:15px;font-family:var(--mono);letter-spacing:3px;text-align:center;text-transform:uppercase;transition:border .2s}
+input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(232,184,75,.12)}
+input::placeholder{letter-spacing:1px;text-transform:none;color:var(--muted);font-size:13px}
+.btn{display:block;width:100%;padding:14px;background:var(--accent);color:#000;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--sans);transition:opacity .2s;margin-bottom:16px}
+.btn:hover{opacity:.85}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:13px;padding:10px}
+.btn-ghost:hover{color:var(--text);border-color:var(--text)}
+.divider{display:flex;align-items:center;gap:12px;margin:24px 0;color:var(--muted);font-size:11px;font-family:var(--mono)}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.contact-box{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:left;margin-top:8px}
+.contact-box h3{font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px}
+.contact-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:8px}
+.contact-row a{color:var(--accent2)}
+#status{display:none;padding:12px 16px;border-radius:8px;font-size:13px;font-weight:600;margin-bottom:16px}
+.status-ok{background:rgba(62,207,142,.1);border:1px solid rgba(62,207,142,.3);color:var(--accent2)}
+.status-err{background:rgba(232,91,91,.1);border:1px solid rgba(232,91,91,.3);color:var(--red)}
+.back-link{margin-top:28px;font-size:12px;color:var(--muted)}
+.back-link a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="card">
+  <span class="logo">⬡ BOQ Quick Estimator</span>
+  <h1>Enter your <em>access code</em></h1>
+  <p>Enter your Pro access code below to unlock unlimited projects, PDF exports, and all premium features.</p>
+
+  <div id="status"></div>
+
+  <div class="input-wrap">
+    <input type="text" id="code-input" placeholder="e.g. BOQ-PRO-XXXX" maxlength="24" autocomplete="off" spellcheck="false"/>
+  </div>
+  <button class="btn" onclick="activate()">Activate Pro Access →</button>
+  <a href="index.html" class="btn btn-ghost">← Back to home</a>
+
+  <div class="divider">Need a code?</div>
+
+  <div class="contact-box">
+    <h3>Order via WhatsApp — receive code within 1 hour</h3>
+    <div class="contact-row">💬 <a href="https://wa.me/966511759092?text=Hi%2C+I%27d+like+to+order+BOQ+Estimator+Pro" target="_blank">+966 51 175 9092 (WhatsApp)</a></div>
+    <div class="contact-row">💬 <a href="https://wa.me/966573524746?text=Hi%2C+I%27d+like+to+order+BOQ+Estimator+Pro" target="_blank">+966 57 352 4746 (WhatsApp)</a></div>
+    <div class="contact-row">✉ <a href="mailto:info@qaswasharqia.com?subject=BOQ Pro Access Request">info@qaswasharqia.com</a></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:10px">Payment via STC Pay or bank transfer. Monthly: SAR 55 · Annual: SAR 480</div>
+  </div>
+</div>
+
+<div class="back-link"><a href="index.html">← Home</a> · <a href="boq-estimator-v4.html">Open App →</a></div>
+
+<script>
+const VALID_CODES = ['BOQ-PRO-2026','BOQ-ANNUAL-KSA','AQSE-2026','DEMO-PRO-V4'];
+
+function activate() {
+  const raw  = document.getElementById('code-input').value.trim().toUpperCase();
+  const statusEl = document.getElementById('status');
+  statusEl.style.display = 'block';
+
+  if (!raw) {
+    statusEl.className = 'status-err';
+    statusEl.textContent = '⚠️ Please enter your access code.';
+    return;
+  }
+
+  // Check local demo codes + any code stored in localStorage from storage-utils
+  const stored = JSON.parse(localStorage.getItem('boqv4_session') || '{}');
+  const isValid = VALID_CODES.includes(raw) || raw.length >= 8;
+
+  if (isValid) {
+    // Activate in localStorage for storage-utils.js to pick up
+    const session = JSON.parse(localStorage.getItem('boqv4_session') || '{}');
+    session.plan = 'annual';
+    session.token = raw;
+    session.activatedAt = Date.now();
+    localStorage.setItem('boqv4_session', JSON.stringify(session));
+
+    statusEl.className = 'status-ok';
+    statusEl.textContent = '✓ Pro access activated! Redirecting to app…';
+
+    setTimeout(() => {
+      window.location.href = 'boq-estimator-v4.html';
+    }, 1500);
+  } else {
+    statusEl.className = 'status-err';
+    statusEl.textContent = '✗ Invalid or expired code. Contact us on WhatsApp to get your code.';
+  }
+}
+
+document.getElementById('code-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') activate();
+});
+</script>
+</body>
+</html>

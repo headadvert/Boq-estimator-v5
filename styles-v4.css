@@ -1,0 +1,417 @@
+/**
+ * styles-v4.css — BOQ Platform v4
+ * ─────────────────────────────────────────────────────────────────────────────
+ * WHAT THIS FILE DOES:
+ *   Additive CSS layer — enhances existing UI without overriding base styles.
+ *   All selectors are scoped or prefixed to avoid conflicts.
+ *
+ * PHILOSOPHY:
+ *   - Override only where strictly needed (e.g. missing mobile breakpoints)
+ *   - Add new utility classes with v4- prefix
+ *   - Enhance existing components with :not() guards where possible
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+/* ============================================================
+   1. CSS CUSTOM PROPERTIES — Additions only
+   ============================================================ */
+:root {
+  --v4-gold-glow:    rgba(232, 184, 75, 0.15);
+  --v4-green-glow:   rgba(62, 207, 142, 0.12);
+  --v4-blue-glow:    rgba(91, 141, 238, 0.12);
+  --v4-red-glow:     rgba(232, 91, 91, 0.12);
+  --v4-radius-lg:    16px;
+  --v4-radius-sm:    6px;
+  --v4-transition:   all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --v4-shadow-float: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(232,184,75,.1);
+}
+
+/* ============================================================
+   2. STICKY SUMMARY PANEL — New component
+   ============================================================ */
+
+/* Base styles injected via JS, animation keyframe defined here */
+@keyframes v4-slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+#sticky-summary {
+  animation: v4-slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#sticky-summary:hover {
+  border-color: rgba(232, 184, 75, 0.6) !important;
+  box-shadow: var(--v4-shadow-float);
+}
+
+/* ============================================================
+   3. OPTIMIZATION PANEL — New component
+   ============================================================ */
+
+#opt-suggestions-panel .card {
+  background: var(--surface);
+}
+
+/* Severity indicator bar on left edge */
+#opt-suggestions-panel [style*="rgba(232,91,91"] {
+  border-left: 3px solid var(--red) !important;
+}
+#opt-suggestions-panel [style*="rgba(232,184,75"] {
+  border-left: 3px solid var(--accent) !important;
+}
+#opt-suggestions-panel [style*="rgba(91,141,238"] {
+  border-left: 3px solid var(--accent3) !important;
+}
+
+/* ============================================================
+   4. PRESET DROPDOWN — New component
+   ============================================================ */
+
+#preset-selector {
+  cursor: pointer;
+  background-image: none; /* Remove default arrow on some browsers */
+}
+
+/* Container glow on hover */
+#page-setup > div:first-of-type:has(#preset-selector):hover {
+  border-color: rgba(232, 184, 75, 0.4) !important;
+}
+
+/* ============================================================
+   5. SAVE / LOAD BUTTONS — New topbar additions
+   ============================================================ */
+
+#btn-save-project {
+  position: relative;
+}
+
+#btn-save-project::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(62, 207, 142, 0.08);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+#btn-save-project:hover::after {
+  opacity: 1;
+}
+
+#btn-load-project:hover {
+  color: var(--accent);
+  border-color: rgba(232, 184, 75, 0.4);
+}
+
+/* ============================================================
+   6. ENHANCED TOPBAR
+   ============================================================ */
+
+.topbar {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+/* ============================================================
+   7. CARD IMPROVEMENTS — Additive only
+   ============================================================ */
+
+/* Subtle hover glow on cards that are clickable */
+.tool-card {
+  transition: var(--v4-transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.tool-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, var(--v4-gold-glow), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.tool-card:hover::before {
+  opacity: 1;
+}
+
+/* ============================================================
+   8. STAT CARDS — Micro-interactions
+   ============================================================ */
+
+.stat-card {
+  transition: var(--v4-transition);
+  position: relative;
+}
+
+/* Subtle left accent bar */
+.stat-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 16px;
+  bottom: 16px;
+  width: 2px;
+  background: transparent;
+  border-radius: 2px;
+  transition: background 0.2s;
+}
+
+.stat-card:hover::before {
+  background: var(--accent);
+}
+
+/* ============================================================
+   9. BOQ TABLE — Print-friendliness
+   ============================================================ */
+
+@media print {
+  .sidebar,
+  .topbar,
+  #sticky-summary,
+  #opt-suggestions-panel,
+  .btn,
+  .upgrade-card,
+  #pro-code-form {
+    display: none !important;
+  }
+
+  .shell {
+    grid-template-columns: 1fr !important;
+  }
+
+  .main {
+    width: 100% !important;
+  }
+
+  .content {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .boq-table,
+  .cost-table {
+    font-size: 10px !important;
+  }
+
+  .card {
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    color: #111 !important;
+  }
+
+  .boq-table th,
+  .cost-table th {
+    background: #f5f5f5 !important;
+    color: #333 !important;
+  }
+
+  .section-row td {
+    background: #fff8e1 !important;
+    color: #555 !important;
+  }
+
+  .total-row td {
+    background: #f0f0f0 !important;
+    font-weight: 700 !important;
+    color: #111 !important;
+  }
+}
+
+/* ============================================================
+   10. SAVED PROJECTS LIST — New component
+   ============================================================ */
+
+#saved-list .card {
+  transition: var(--v4-transition);
+}
+
+#saved-list .card:hover {
+  border-color: rgba(232, 184, 75, 0.4);
+  background: var(--surface2);
+}
+
+/* Progress bar fill animation */
+.progress-fill {
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================
+   11. FORM INPUTS — Improved focus states
+   ============================================================ */
+
+.form-control:focus {
+  box-shadow: 0 0 0 3px rgba(232, 184, 75, 0.12);
+}
+
+.size-select:focus {
+  box-shadow: 0 0 0 3px rgba(232, 184, 75, 0.12);
+}
+
+/* ============================================================
+   12. RADIO CARDS — Improved selected state
+   ============================================================ */
+
+.radio-card.selected {
+  box-shadow: 0 0 0 2px rgba(232, 184, 75, 0.4) inset;
+}
+
+.radio-card:active {
+  transform: scale(0.98);
+}
+
+/* ============================================================
+   13. RESPONSIVE IMPROVEMENTS — Additions (mobile)
+   ============================================================ */
+
+@media (max-width: 768px) {
+  #sticky-summary {
+    bottom: 12px;
+    right: 12px;
+    min-width: 160px;
+    padding: 12px 14px;
+  }
+
+  #sticky-total {
+    font-size: 16px !important;
+  }
+
+  .topbar {
+    padding: 10px 14px;
+  }
+
+  .topbar-actions {
+    gap: 4px;
+  }
+
+  .btn.btn-sm {
+    padding: 6px 10px;
+    font-size: 10px;
+  }
+
+  /* Hide less important topbar buttons on mobile */
+  #btn-load-project {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .section-header h1 {
+    font-size: 24px !important;
+  }
+
+  #opt-suggestions-panel [style*="rgba"] {
+    flex-direction: column;
+  }
+}
+
+/* ============================================================
+   14. NOTIFICATION STACK — Multiple notifications
+   ============================================================ */
+
+.notif {
+  pointer-events: none;
+}
+
+/* Stack notifications vertically */
+.notif + .notif {
+  top: 60px;
+}
+
+/* ============================================================
+   15. UTILITY CLASSES — v4 additions
+   ============================================================ */
+
+/* Shimmer loading placeholder */
+.v4-skeleton {
+  background: linear-gradient(90deg, var(--surface2) 25%, var(--surface) 50%, var(--surface2) 75%);
+  background-size: 200% 100%;
+  animation: v4-shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+@keyframes v4-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Focus ring utility */
+.v4-focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(232, 184, 75, 0.35);
+}
+
+/* Truncate text */
+.v4-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Mono value display */
+.v4-mono-val {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--accent2);
+}
+
+/* ============================================================
+   16. PLAN BADGE — SaaS hook UI
+   ============================================================ */
+
+.v4-plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 9px;
+  font-weight: 700;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.v4-plan-badge.free {
+  background: rgba(122, 132, 153, 0.15);
+  color: var(--muted);
+  border: 1px solid rgba(122, 132, 153, 0.3);
+}
+
+.v4-plan-badge.pro {
+  background: rgba(232, 184, 75, 0.15);
+  color: var(--accent);
+  border: 1px solid rgba(232, 184, 75, 0.35);
+}
+
+/* ============================================================
+   17. ACCESS CODE INPUT
+   ============================================================ */
+
+#pro-code-form input::placeholder {
+  font-size: 10px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+#pro-code-form input:focus {
+  border-color: var(--accent);
+}
+
+/* ============================================================
+   EOF styles-v4.css
+   All styles above are additive. No existing base styles removed.
+   ============================================================ */
